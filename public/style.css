@@ -175,3 +175,18 @@ body {
     background: #ccc;
 }
 
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.opacity-50 {
+    opacity: 0.5;
+}
+
+.hover-opacity-100:hover {
+    opacity: 1 !important;
+}
+
+.room-item:hover .flex-grow-1 {
+    color: var(--purple);
+}

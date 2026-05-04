@@ -43,7 +43,10 @@
             <span class="navbar-brand mb-0 h1 logo-text fs-3">RPG DICE ROOM</span>
             <div class="d-flex align-items-center">
                 <span id="user-display" class="badge bg-gold text-dark me-3 fs-6"></span>
-                <span id="room-display" class="badge bg-purple fs-6"></span>
+                <span id="room-display" class="badge bg-purple me-3 fs-6"></span>
+                <button id="leave-btn" class="btn btn-outline-light btn-sm opacity-75 hover-opacity-100">
+                    <i class="fa-solid fa-right-from-bracket"></i> Salir
+                </button>
             </div>
         </nav>
 
@@ -80,7 +83,12 @@
                 <div class="card glass-panel h-100 border-0 shadow overflow-hidden">
                     <div class="card-header bg-transparent border-0 p-4 pb-0 d-flex justify-content-between align-items-center">
                         <h3 class="section-title mb-0"><i class="fa-solid fa-scroll me-2"></i>Historial de la Sala</h3>
-                        <span class="text-muted small">Mostrando últimas 50 tiradas</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <button id="clear-history-btn" class="btn btn-outline-danger btn-sm" title="Reiniciar Sala">
+                                <i class="fa-solid fa-trash-can"></i> Reiniciar
+                            </button>
+                            <span class="text-muted small">Últimas 50</span>
+                        </div>
                     </div>
                     <div id="history-list" class="card-body overflow-auto p-4" style="max-height: 70vh;">
                         <!-- Rolls will appear here -->

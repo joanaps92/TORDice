@@ -63,6 +63,28 @@ io.on('connection', (socket) => {
         socket.emit('load-history', history);
     });
 
+    socket.on('clear-history', (roomName) => {
+        const data = loadData();
+        if (data.rooms[roomName]) {
+            data.rooms[roomName] = [];
+            saveData(data);
+            console.log(`Historial borrado en la sala: ${roomName}`);
+            io.to(roomName).emit('load-history', []);
+        }
+    });
+
+    socket.on('delete-room', (roomName) => {
+        const data = loadData();
+        if (data.rooms[roomName]) {
+            delete data.rooms[roomName];
+            saveData(data);
+            console.log(`Sala eliminada: ${roomName}`);
+            emitRoomList();
+            // Opcional: desconectar a los usuarios de esa sala o avisarles
+            io.to(roomName).emit('room-deleted');
+        }
+    });
+
     socket.on('roll-dice', (payload) => {
         const { room, user, d12Count, d6Count } = payload;
         

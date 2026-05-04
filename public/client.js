@@ -43,6 +43,8 @@ const rollBtn = document.getElementById('roll-btn');
 const historyList = document.getElementById('history-list');
 const roomList = document.getElementById('room-list');
 const roomListContainer = document.getElementById('room-list-container');
+const clearHistoryBtn = document.getElementById('clear-history-btn');
+const leaveBtn = document.getElementById('leave-btn');
 
 // UI Handlers
 d12Range.addEventListener('input', (e) => {
@@ -131,6 +133,35 @@ rollBtn.addEventListener('click', () => {
     d6Val.textContent = "0";
 });
 
+// Clear History
+clearHistoryBtn.addEventListener('click', () => {
+    if (confirm("¿Seguro que quieres borrar todo el historial de esta sala?")) {
+        if (isLocalFile) {
+            localStorage.setItem(`rpg_history_${currentRoom}`, JSON.stringify([]));
+            historyList.innerHTML = "";
+            renderEmptyMessage();
+        } else {
+            socket.emit('clear-history', currentRoom);
+        }
+    }
+});
+
+// Leave Room
+leaveBtn.addEventListener('click', () => {
+    if (confirm("¿Seguro que quieres salir de la sala?")) {
+        if (!isLocalFile) {
+            // Socket.io handles room leaving on disconnect or we can emit an event
+            // For simplicity and to reset all state, we'll reload
+            window.location.reload();
+        } else {
+            loginScreen.classList.remove('d-none');
+            appScreen.classList.add('d-none');
+            currentUser = "";
+            currentRoom = "";
+        }
+    }
+});
+
 // Socket Events
 socket.on('load-history', (history) => {
     historyList.innerHTML = "";
@@ -163,6 +194,11 @@ socket.on('disconnect', () => {
     console.warn("Desconectado del servidor");
 });
 
+socket.on('room-deleted', () => {
+    alert("Esta sala ha sido eliminada por un administrador.");
+    window.location.reload();
+});
+
 socket.on('update-rooms', (rooms) => {
     if (rooms.length === 0) {
         roomListContainer.classList.add('d-none');
@@ -172,16 +208,36 @@ socket.on('update-rooms', (rooms) => {
     roomListContainer.classList.remove('d-none');
     roomList.innerHTML = "";
     rooms.forEach(room => {
-        const item = document.createElement('a');
-        item.className = "list-group-item list-group-item-action room-item d-flex justify-content-between align-items-center py-3";
-        item.innerHTML = `
-            <span><i class="fa-solid fa-door-open me-2 text-gold"></i> ${room}</span>
-            <i class="fa-solid fa-chevron-right small opacity-50"></i>
-        `;
-        item.onclick = () => {
+        const item = document.createElement('div');
+        item.className = "list-group-item list-group-item-action room-item d-flex justify-content-between align-items-center py-2 px-3";
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.className = "flex-grow-1 cursor-pointer py-2";
+        nameSpan.innerHTML = `<i class="fa-solid fa-door-open me-2 text-gold"></i> ${room}`;
+        nameSpan.onclick = () => {
             roomnameInput.value = room;
             joinBtn.click();
         };
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = "btn btn-link text-danger p-2 opacity-50 hover-opacity-100";
+        deleteBtn.innerHTML = `<i class="fa-solid fa-trash-can"></i>`;
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (confirm(`¿Eliminar la sala "${room}" y todo su historial?`)) {
+                if (isLocalFile) {
+                    localStorage.removeItem(`rpg_history_${room}`);
+                    // En modo local no tenemos forma de actualizar la lista fácilmente sin un "server" simulado más complejo
+                    item.remove();
+                    if (roomList.children.length === 0) roomListContainer.classList.add('d-none');
+                } else {
+                    socket.emit('delete-room', room);
+                }
+            }
+        };
+
+        item.appendChild(nameSpan);
+        item.appendChild(deleteBtn);
         roomList.appendChild(item);
     });
 });
