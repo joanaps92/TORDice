@@ -1,0 +1,124 @@
+{
+  "rooms": {
+    "Test": [
+      {
+        "id": 1777927306765,
+        "user": "Albert 2",
+        "d12Results": [
+          3
+        ],
+        "d6Results": [
+          1,
+          5
+        ],
+        "total": 9,
+        "timestamp": "22:41:46"
+      },
+      {
+        "id": 1777927368074,
+        "user": "Joan 1",
+        "d12Results": [
+          3
+        ],
+        "d6Results": [
+          6,
+          4,
+          6
+        ],
+        "total": 19,
+        "timestamp": "22:42:48"
+      }
+    ],
+    "Adventure": [
+      {
+        "id": 1777927751601,
+        "user": "Tester",
+        "d12Results": [
+          2,
+          10,
+          7,
+          10,
+          1,
+          11
+        ],
+        "d6Results": [
+          5,
+          2,
+          5,
+          5,
+          5,
+          4
+        ],
+        "total": 67,
+        "timestamp": "22:49:11"
+      },
+      {
+        "id": 1777928103422,
+        "user": "Albert 2",
+        "d12Results": [
+          5
+        ],
+        "d6Results": [
+          4,
+          4,
+          6
+        ],
+        "total": 19,
+        "timestamp": "22:55:03"
+      },
+      {
+        "id": 1777928148401,
+        "user": "Tester",
+        "d12Results": [
+          7
+        ],
+        "d6Results": [
+          1,
+          4
+        ],
+        "total": 12,
+        "timestamp": "22:55:48"
+      }
+    ],
+    "Verification": [
+      {
+        "id": 1777927815908,
+        "user": "Tester",
+        "d12Results": [
+          11,
+          10,
+          5,
+          12,
+          3,
+          5,
+          12
+        ],
+        "d6Results": [
+          3,
+          2,
+          5,
+          6,
+          3,
+          3,
+          5
+        ],
+        "total": 85,
+        "timestamp": "22:50:15"
+      },
+      {
+        "id": 1777927855494,
+        "user": "Tester",
+        "d12Results": [
+          1,
+          8
+        ],
+        "d6Results": [
+          6,
+          5
+        ],
+        "total": 20,
+        "timestamp": "22:50:55"
+      }
+    ]
+  }
+}
