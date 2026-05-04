@@ -1,17 +1,20 @@
 :root {
-    --gold: #d4a017;
-    --gold-dark: #b8860b;
-    --purple: #7b1fa2;
+    --accent: #2c3e50;
+    --accent-dark: #1a1a1a;
+    --purple: #4a4a4a;
     --text-main: #2d3436;
     --text-muted: #636e72;
-    --bg-light: #f8f9fa;
-    --glass: rgba(255, 255, 255, 0.8);
-    --glass-border: rgba(0, 0, 0, 0.05);
+    --bg-paper: #f4ecd8;
+    --glass: rgba(255, 255, 255, 0.4);
+    --glass-border: rgba(0, 0, 0, 0.1);
 }
 
 body {
     font-family: 'Inter', sans-serif;
-    background: radial-gradient(circle at top right, #fdfbfb, #ebedee);
+    background-color: var(--bg-paper);
+    background-image: 
+        radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, rgba(0,0,0,0.05) 100%),
+        url("https://www.transparenttextures.com/patterns/parchment.png");
     color: var(--text-main);
     min-height: 100vh;
     overflow-x: hidden;
@@ -19,8 +22,8 @@ body {
 
 .logo-text {
     font-family: 'MedievalSharp', cursive;
-    color: var(--gold-dark);
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    color: var(--accent-dark);
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
     letter-spacing: 2px;
 }
 
@@ -47,7 +50,7 @@ body {
 }
 
 .btn-gold {
-    background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
     color: #fff;
     border: none;
     transition: all 0.3s ease;
@@ -55,16 +58,22 @@ body {
 
 .btn-gold:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(212, 160, 23, 0.3);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
     color: #fff;
 }
 
+.bg-gold {
+    background-color: var(--accent) !important;
+    color: white !important;
+}
+
 .bg-purple {
-    background-color: var(--purple);
+    background-color: var(--purple) !important;
+    color: white !important;
 }
 
 .text-gold {
-    color: var(--gold-dark);
+    color: var(--accent-dark);
 }
 
 /* Room List Styling */
@@ -83,10 +92,10 @@ body {
 
 /* Custom Range Input */
 .custom-range::-webkit-slider-thumb {
-    background: var(--gold);
+    background: var(--accent);
 }
 .custom-range::-moz-range-thumb {
-    background: var(--gold);
+    background: var(--accent);
 }
 
 /* Roll Entry Styling */
@@ -133,7 +142,7 @@ body {
 .total-val {
     font-size: 1.4rem;
     font-weight: bold;
-    color: var(--purple);
+    color: var(--accent-dark);
     font-family: 'MedievalSharp', cursive;
     line-height: 1;
 }
@@ -189,4 +198,23 @@ body {
 
 .room-item:hover .flex-grow-1 {
     color: var(--purple);
+}
+
+.total-badge.border-success {
+    border: 2px solid #28a745 !important;
+}
+
+.total-badge.border-danger {
+    border: 2px solid #dc3545 !important;
+}
+
+.dice-icon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    vertical-align: middle;
+    background: #fff;
+    border-radius: 4px;
+    border: 1px solid #e1e2e6;
+    padding: 1px;
 }

@@ -16,6 +16,9 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'data.json');
 
+// Estado en memoria para usuarios conectados
+const activeUsers = {}; // socket.id -> { username, room }
+
 // Middleware
 app.use(express.static('public'));
 app.use(express.json());
@@ -47,20 +50,32 @@ function emitRoomList() {
     io.emit('update-rooms', roomNames);
 }
 
+// Enviar lista de usuarios de una sala
+function emitUserList(roomName) {
+    const usersInRoom = Object.values(activeUsers)
+        .filter(u => u.room === roomName)
+        .map(u => u.username);
+    io.to(roomName).emit('update-room-users', usersInRoom);
+}
+
 io.on('connection', (socket) => {
     console.log('Usuario conectado:', socket.id);
     
     // Enviar lista de salas al conectar
     emitRoomList();
 
-    socket.on('join-room', (roomName) => {
+    socket.on('join-room', ({ roomName, username }) => {
         socket.join(roomName);
-        console.log(`Usuario unido a la sala: ${roomName}`);
+        activeUsers[socket.id] = { username, room: roomName };
+        console.log(`Usuario ${username} unido a la sala: ${roomName}`);
         
         // Enviar historial de la sala al usuario que se conecta
         const data = loadData();
         const history = data.rooms[roomName] || [];
         socket.emit('load-history', history);
+
+        // Actualizar lista de usuarios para todos en la sala
+        emitUserList(roomName);
     });
 
     socket.on('clear-history', (roomName) => {
@@ -125,6 +140,12 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
+        const user = activeUsers[socket.id];
+        if (user) {
+            const room = user.room;
+            delete activeUsers[socket.id];
+            emitUserList(room);
+        }
         console.log('Usuario desconectado');
     });
 });

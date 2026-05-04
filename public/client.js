@@ -45,6 +45,7 @@ const roomList = document.getElementById('room-list');
 const roomListContainer = document.getElementById('room-list-container');
 const clearHistoryBtn = document.getElementById('clear-history-btn');
 const leaveBtn = document.getElementById('leave-btn');
+const activeUsersList = document.getElementById('active-users-list');
 
 // UI Handlers
 d12Range.addEventListener('input', (e) => {
@@ -79,7 +80,7 @@ joinBtn.addEventListener('click', () => {
         else history.forEach(roll => addRollToUI(roll, false));
         scrollToBottom();
     } else {
-        socket.emit('join-room', currentRoom);
+        socket.emit('join-room', { roomName: currentRoom, username: currentUser });
     }
 
     loginScreen.classList.add('d-none');
@@ -194,6 +195,21 @@ socket.on('disconnect', () => {
     console.warn("Desconectado del servidor");
 });
 
+socket.on('update-room-users', (users) => {
+    activeUsersList.innerHTML = "";
+    users.forEach(user => {
+        const badge = document.createElement('span');
+        badge.className = "badge bg-gold px-3 py-2";
+        badge.innerHTML = `<i class="fa-solid fa-user-shield me-1"></i> ${user}`;
+        if (user === currentUser) {
+            badge.classList.remove('bg-gold');
+            badge.classList.add('bg-purple');
+            badge.innerHTML += " (Tú)";
+        }
+        activeUsersList.appendChild(badge);
+    });
+});
+
 socket.on('room-deleted', () => {
     alert("Esta sala ha sido eliminada por un administrador.");
     window.location.reload();
@@ -249,11 +265,25 @@ function addRollToUI(roll, isNew) {
     const d12Results = roll.d12Results || [];
     const d6Results = roll.d6Results || [];
     
-    const d12Total = d12Results.reduce((a, b) => a + b, 0);
     const d6Total = d6Results.reduce((a, b) => a + b, 0);
+    const getD12SortValue = (v) => v === 11 ? -1 : (v === 12 ? 13 : v);
+    
+    let maxD12 = null;
+    let minD12 = null;
+    
+    if (d12Results.length > 0) {
+        maxD12 = d12Results.reduce((a, b) => getD12SortValue(a) > getD12SortValue(b) ? a : b);
+        minD12 = d12Results.reduce((a, b) => getD12SortValue(a) < getD12SortValue(b) ? a : b);
+    }
+
+    const renderD12 = (val) => {
+        if (val === 11) return `<img src="eye_of_sauron.png" class="dice-icon" title="Ojo de Sauron (Mínimo)">`;
+        if (val === 12) return `<img src="gandalf_rune.png" class="dice-icon" title="Runa de Gandalf (Máximo)">`;
+        return `<span class="dice-badge">${val}</span>`;
+    };
 
     const d12Str = d12Results.length > 0 
-        ? `<div class="mb-2"><span class="text-muted small fw-bold">D12:</span> ${d12Results.map(r => `<span class="dice-badge me-1">${r}</span>`).join('')}</div>` 
+        ? `<div class="mb-2"><span class="text-muted small fw-bold">D12:</span> ${d12Results.map(r => `<span class="me-1 d-inline-block">${renderD12(r)}</span>`).join('')}</div>` 
         : '';
         
     const d6Str = d6Results.length > 0 
@@ -268,16 +298,26 @@ function addRollToUI(roll, isNew) {
                 ${d6Str}
             </div>
             <div class="total-badge-container">
-                ${d12Results.length > 0 ? `
+                ${d12Results.length === 1 ? `
                     <div class="total-badge">
-                        <span class="total-val">${d12Total}</span>
+                        <span class="total-val">${renderD12(d12Results[0])}</span>
                         <span class="total-label">D12</span>
+                    </div>
+                ` : ''}
+                ${d12Results.length > 1 ? `
+                    <div class="total-badge border-success">
+                        <span class="total-val text-success">${renderD12(maxD12)}</span>
+                        <span class="total-label">MAX D12</span>
+                    </div>
+                    <div class="total-badge border-danger">
+                        <span class="total-val text-danger">${renderD12(minD12)}</span>
+                        <span class="total-label">MIN D12</span>
                     </div>
                 ` : ''}
                 ${d6Results.length > 0 ? `
                     <div class="total-badge">
                         <span class="total-val">${d6Total}</span>
-                        <span class="total-label">D6</span>
+                        <span class="total-label">TOTAL D6</span>
                     </div>
                 ` : ''}
             </div>

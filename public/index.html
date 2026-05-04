@@ -39,12 +39,12 @@
 
     <!-- Main App Screen (Hidden initially) -->
     <div id="app-screen" class="container-fluid py-4 d-none">
-        <nav class="navbar navbar-dark mb-4 px-3 rounded shadow-sm glass-panel">
+        <nav class="navbar navbar-light mb-4 px-3 rounded shadow-sm glass-panel">
             <span class="navbar-brand mb-0 h1 logo-text fs-3">RPG DICE ROOM</span>
             <div class="d-flex align-items-center">
                 <span id="user-display" class="badge bg-gold text-dark me-3 fs-6"></span>
                 <span id="room-display" class="badge bg-purple me-3 fs-6"></span>
-                <button id="leave-btn" class="btn btn-outline-light btn-sm opacity-75 hover-opacity-100">
+                <button id="leave-btn" class="btn btn-outline-danger btn-sm ms-2">
                     <i class="fa-solid fa-right-from-bracket"></i> Salir
                 </button>
             </div>
@@ -75,6 +75,14 @@
                     <button id="roll-btn" class="btn btn-gold btn-lg w-100 fw-bold mt-auto shadow-sm">
                         <i class="fa-solid fa-hand-fist me-2"></i>¡LANZAR DADOS!
                     </button>
+                </div>
+
+                <!-- Active Users Panel -->
+                <div class="card glass-panel mt-4 border-0 p-4 shadow">
+                    <h5 class="section-title mb-3"><i class="fa-solid fa-users me-2"></i>Aventureros</h5>
+                    <div id="active-users-list" class="d-flex flex-wrap gap-2">
+                        <!-- User badges will appear here -->
+                    </div>
                 </div>
             </div>
 
