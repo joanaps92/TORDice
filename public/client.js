@@ -1,6 +1,17 @@
-// Detect if running locally without a server
 const isLocalFile = window.location.protocol === 'file:';
-const socket = isLocalFile ? { on: () => {}, emit: () => {} } : io();
+
+// Initialize socket with error handling
+let socket;
+if (isLocalFile) {
+    socket = { on: () => {}, emit: () => {}, connected: false };
+} else {
+    try {
+        socket = io();
+    } catch (e) {
+        console.error("Error al inicializar Socket.io:", e);
+        socket = { on: () => {}, emit: () => {}, connected: false };
+    }
+}
 
 // Mock persistence for local testing
 const getLocalHistory = (room) => JSON.parse(localStorage.getItem(`rpg_history_${room}`) || '[]');
@@ -138,6 +149,18 @@ socket.on('new-roll', (roll) => {
 
     addRollToUI(roll, true);
     scrollToBottom();
+});
+
+socket.on('connect', () => {
+    console.log("Conectado al servidor de dados");
+});
+
+socket.on('connect_error', (err) => {
+    console.error("Error de conexión:", err.message);
+});
+
+socket.on('disconnect', () => {
+    console.warn("Desconectado del servidor");
 });
 
 socket.on('update-rooms', (rooms) => {
