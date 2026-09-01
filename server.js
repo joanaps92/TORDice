@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
-const { connectDB, Roll, Room } = require('./db');
+const { connectDB, Roll, Room, Adventurer } = require('./db');
 
 const app = express();
 const server = http.createServer(app);
@@ -22,6 +22,48 @@ const activeUsers = {};
 app.use(express.static('public'));
 app.use(express.json());
 
+// Aventureros: el cliente conserva el mismo documento JSON que usa la ficha.
+app.get('/api/adventurers', async (_req, res) => {
+    try {
+        const adventurers = await Adventurer.find().sort({ updatedAt: -1 }).lean();
+        res.json(adventurers);
+    } catch (err) {
+        console.error('Error al listar aventureros:', err);
+        res.status(500).json({ error: 'No se pudieron cargar los aventureros.' });
+    }
+});
+
+app.post('/api/adventurers', async (req, res) => {
+    try {
+        const ficha = req.body;
+        const nombre = ficha?.informacionGeneral?.nombre?.trim();
+        if (!nombre) return res.status(400).json({ error: 'El nombre del aventurero es obligatorio.' });
+        const duplicate = await Adventurer.findOne({ nombre: { $regex: `^${nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } });
+        if (duplicate) return res.status(409).json({ error: 'Ya existe una hoja con ese nombre. Elige otro nombre.' });
+        const adventurer = await Adventurer.create({ nombre, ficha, updatedAt: new Date() });
+        res.status(201).json(adventurer);
+    } catch (err) {
+        console.error('Error al crear aventurero:', err);
+        res.status(400).json({ error: 'No se pudo guardar la ficha.' });
+    }
+});
+
+app.put('/api/adventurers/:id', async (req, res) => {
+    try {
+        const ficha = req.body;
+        const nombre = ficha?.informacionGeneral?.nombre?.trim();
+        if (!nombre) return res.status(400).json({ error: 'El nombre del aventurero es obligatorio.' });
+        const duplicate = await Adventurer.findOne({ _id: { $ne: req.params.id }, nombre: { $regex: `^${nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } });
+        if (duplicate) return res.status(409).json({ error: 'Ya existe otra hoja con ese nombre. Elige otro nombre.' });
+        const adventurer = await Adventurer.findByIdAndUpdate(req.params.id, { nombre, ficha, updatedAt: new Date() }, { new: true, runValidators: true });
+        if (!adventurer) return res.status(404).json({ error: 'Aventurero no encontrado.' });
+        res.json(adventurer);
+    } catch (err) {
+        console.error('Error al actualizar aventurero:', err);
+        res.status(400).json({ error: 'No se pudo actualizar la ficha.' });
+    }
+});
+
 // Enviar lista de salas a todos
 async function emitRoomList() {
     try {
@@ -39,7 +81,9 @@ function emitUserList(roomName) {
         .map(([id, u]) => ({
             id,
             username: u.username,
-            stance: u.stance || 'Posición abierta'
+            stance: u.stance || 'Posición abierta',
+            adventurerId: u.adventurerId || null,
+            adventurerName: u.adventurerName || ''
         }));
     io.to(roomName).emit('update-room-users', usersInRoom);
 }
@@ -49,13 +93,15 @@ io.on('connection', (socket) => {
 
     emitRoomList();
 
-    socket.on('join-room', async ({ roomName, username, stance }) => {
+    socket.on('join-room', async ({ roomName, username, stance, adventurerId, adventurerName }) => {
         try {
             socket.join(roomName);
             activeUsers[socket.id] = {
                 username: username || 'Aventurero',
                 room: roomName,
-                stance: stance || 'Posición abierta'
+                stance: stance || 'Posición abierta',
+                adventurerId: adventurerId || null,
+                adventurerName: adventurerName || ''
             };
             console.log(`Usuario ${username} unido a la sala: ${roomName} con postura: ${activeUsers[socket.id].stance}`);
 
@@ -76,7 +122,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('update-user', ({ username, stance }) => {
+    socket.on('update-user', ({ username, stance, adventurerId, adventurerName }) => {
         try {
             const user = activeUsers[socket.id];
             if (user) {
@@ -85,6 +131,10 @@ io.on('connection', (socket) => {
                 }
                 if (stance && typeof stance === 'string') {
                     user.stance = stance;
+                }
+                if (adventurerId !== undefined) {
+                    user.adventurerId = adventurerId || null;
+                    user.adventurerName = adventurerName || '';
                 }
                 console.log(`Usuario ${socket.id} actualizado: ${user.username} - ${user.stance} en sala ${user.room}`);
                 emitUserList(user.room);

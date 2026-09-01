@@ -16,12 +16,21 @@ const roomSchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true }
 });
 
+// La ficha se mantiene flexible para poder conservar el JSON completo del aventurero.
+const adventurerSchema = new mongoose.Schema({
+  nombre: { type: String, required: true, trim: true },
+  ficha: { type: mongoose.Schema.Types.Mixed, required: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
 const Roll = mongoose.model('Roll', rollSchema);
 const Room = mongoose.model('Room', roomSchema);
+const Adventurer = mongoose.model('Adventurer', adventurerSchema);
 
 async function connectDB() {
   await mongoose.connect(process.env.MONGODB_URI);
   console.log('Conectado a MongoDB');
 }
 
-module.exports = { connectDB, Roll, Room };
+module.exports = { connectDB, Roll, Room, Adventurer };

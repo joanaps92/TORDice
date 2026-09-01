@@ -931,3 +931,59 @@ h1, h2, h3, h4, h5, h6,
         font-size: 1.2rem;
     }
 }
+
+/* =========================================================
+   ADVENTURER CREATION SHEET
+   ========================================================= */
+.adventurer-screen { min-height: 100vh; padding: 24px; background: radial-gradient(circle at 50% 0, rgba(255,255,255,.8), transparent 40%), #e8dfca; }
+.adventurer-sheet { max-width: 1500px; margin: auto; background: #fffdf3; color: var(--tor-ink); border: 2px solid var(--tor-red-border); box-shadow: 0 8px 30px rgba(63, 38, 22, .22); position: relative; }
+.adventurer-sheet:before, .adventurer-sheet:after { content: "✦  ❧  ✦  ❧  ✦"; display: block; text-align: center; color: var(--tor-red); letter-spacing: 12px; font-size: 20px; height: 26px; overflow: hidden; }
+.sheet-header { display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: center; gap: 16px; padding: 12px 28px 4px; text-align: center; }
+.sheet-header h1, .sheet-panel h2 { font-family: 'MedievalSharp', 'Cinzel', serif; color: var(--tor-red); margin: 0; }
+.sheet-header h1 { font-size: clamp(1.8rem, 4vw, 3.15rem); }
+.sheet-kicker { margin: 0; font: 700 .68rem 'Cinzel', serif; letter-spacing: 2px; color: var(--tor-red-dark); }
+.sheet-actions { display: flex; justify-content: end; gap: 8px; flex-wrap: wrap; }
+.sheet-back { justify-self: start; }
+.sheet-content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 290px; gap: 14px; padding: 10px 24px 24px; }
+.sheet-panel { background: rgba(255,255,255,.48); border: 1px solid var(--tor-red-border); padding: 15px; box-shadow: inset 0 0 0 3px rgba(255,253,243,.85); }
+.sheet-panel h2 { text-align: center; border-bottom: 1px solid rgba(167,40,29,.45); padding-bottom: 7px; margin-bottom: 11px; font-size: 1.5rem; }
+.sheet-general { grid-column: 1 / 3; }
+.sheet-name { text-align: center; font: 1.35rem 'Cinzel', serif !important; color: var(--tor-red-dark) !important; }
+.identity-grid, .stat-grid, .equipment-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px 12px; margin-top: 12px; }
+.identity-grid .wide, .equipment-grid .wide { grid-column: span 2; }
+.sheet-panel label { display: flex; flex-direction: column; gap: 3px; color: var(--tor-red-dark); font: 700 .72rem 'Cinzel', serif; letter-spacing: .25px; text-transform: uppercase; }
+.sheet-panel input { width: 100%; min-width: 0; padding: 3px 5px; border: none !important; border-bottom: 1px solid rgba(103,57,31,.5) !important; border-radius: 0 !important; background: rgba(255,255,255,.45) !important; font-size: 1rem !important; }
+.sheet-panel input:focus { box-shadow: none !important; border-bottom: 2px solid var(--tor-red) !important; }
+.attribute-panels { grid-column: 1 / 3; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.attribute-panel { padding: 0 11px 12px; border-right: 1px solid var(--tor-red-border); }
+.attribute-panel:last-child { border-right: 0; }
+.attribute-title { font: 1.85rem 'MedievalSharp', serif; color: var(--tor-red); text-align: center; margin: 0 0 8px; }
+.attribute-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 12px; }
+.attribute-stats { gap: 16px; }
+.attribute-stats label { min-width: 0; font-size: .8rem; line-height: 1.05; }
+.attribute-stats .attribute-inline { flex-direction: row; align-items: center; gap: 7px; white-space: nowrap; }
+.attribute-stats .attribute-inline input { flex: 0 0 54px; width: 54px; min-width: 54px; }
+.attribute-stats input { font-size: 1rem !important; min-height: 27px; }
+.skill-row { display: grid; grid-template-columns: 1fr 43px 31px; gap: 5px; align-items: center; padding: 4px 0; border-top: 1px solid rgba(167,40,29,.22); font: 600 1rem 'Crimson Pro', serif; }
+.skill-row input[type=number] { text-align: center; padding: 1px; }
+.skill-row label { flex-direction: row; align-items: center; font-size: .58rem; }
+.skill-row input[type=checkbox], .state-list input { width: auto; accent-color: var(--tor-red); }
+.sheet-sidebar { grid-column: 3; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 14px; }
+.portrait-panel { flex: 1; min-height: 210px; display: grid; place-items: center; }
+.portrait-placeholder { color: var(--tor-red); display: flex; flex-direction: column; gap: 10px; align-items: center; font: 1.5rem 'MedievalSharp', serif; text-transform: uppercase; letter-spacing: 2px; opacity: .8; }
+.portrait-placeholder i { font-size: 4rem; opacity: .4; }
+.compact-panel { padding: 12px; }
+.compact-panel h2 { font-size: 1.25rem; }
+.compact-panel .stat-grid { grid-template-columns: 1fr 1fr; }
+.state-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.state-list label { flex-direction: row; align-items: center; font-size: .65rem; }
+.sheet-combat { grid-column: 1 / 3; }
+.combat-skills { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.combat-skills label { text-align: center; }.combat-skills input { text-align: center; }
+.war-gear-list { display: flex; flex-direction: column; gap: 12px; }
+.war-gear-entry { padding: 11px; border: 1px solid rgba(167,40,29,.38); background: rgba(255,255,255,.4); }
+.war-gear-title { font: 700 .8rem 'Cinzel', serif; color: var(--tor-red-dark); text-transform: uppercase; letter-spacing: .5px; }
+.sheet-travel { grid-column: 3; }.sheet-travel .stat-grid { grid-template-columns: 1fr 1fr; }
+.sheet-footer { border-top: 1px solid var(--tor-red-border); display: flex; justify-content: space-between; padding: 10px 24px; color: var(--tor-ink-muted); font: italic 1rem 'Crimson Pro', serif; }
+@media (max-width: 1050px) { .sheet-content { grid-template-columns: 1fr 1fr; }.sheet-sidebar { grid-column: 1 / 3; grid-row: auto; display:grid; grid-template-columns: 1.3fr 1fr 1fr; }.portrait-panel { min-height: 0; }.sheet-travel { grid-column: 1 / 3; }.sheet-travel .stat-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 700px) { .adventurer-screen { padding: 7px; }.sheet-header { grid-template-columns: 1fr; padding: 8px 14px; }.sheet-back { justify-self: center; }.sheet-actions { justify-content: center; }.sheet-content { display: block; padding: 8px; }.sheet-content > *, .sheet-sidebar { margin-bottom: 12px; }.attribute-panels { grid-template-columns: 1fr; }.attribute-panel { border-right: 0; border-bottom: 1px solid var(--tor-red-border); }.sheet-sidebar { display: flex; }.identity-grid, .stat-grid, .equipment-grid { grid-template-columns: 1fr 1fr; }.identity-grid .wide, .equipment-grid .wide { grid-column: span 2; }.sheet-general, .sheet-combat, .sheet-travel { grid-column: auto; }.combat-skills { grid-template-columns: repeat(2, 1fr); }.sheet-footer { padding: 9px 14px; } }

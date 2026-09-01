@@ -84,6 +84,99 @@ const playersRetaguardia = document.getElementById('players-retaguardia');
 const battleZones = document.querySelectorAll('.battle-stance-zone');
 
 // ==========================================
+// ADVENTURER SHEET
+// ==========================================
+const adventurerScreen = document.getElementById('adventurer-screen');
+const openAdventurerBtn = document.getElementById('open-adventurer-btn');
+const openAdventurerButtons = document.querySelectorAll('.open-adventurer-btn');
+const closeAdventurerBtn = document.getElementById('close-adventurer-btn');
+const adventurerForm = document.getElementById('adventurer-form');
+const attributePanels = document.getElementById('attribute-panels');
+const combatSkills = document.getElementById('combat-skills');
+const warGearList = document.getElementById('war-gear-list');
+const addWarGearBtn = document.getElementById('add-war-gear-btn');
+const exportAdventurerBtn = document.getElementById('export-adventurer-btn');
+const resetAdventurerBtn = document.getElementById('reset-adventurer-btn');
+const adventurerImport = document.getElementById('adventurer-import');
+const saveAdventurerBtn = document.getElementById('save-adventurer-btn');
+const sheetLibrarySelect = document.getElementById('sheet-library-select');
+const adventurerSelect = document.getElementById('adventurer-select');
+const ADVENTURER_KEY = 'tor_adventurer_draft';
+
+const newAdventurer = () => ({
+    _id: null,
+    informacionGeneral: { nombre: '', culturaHeroica: '', ocupacion: '', nivelDeVida: '', edad: 0, bendicionCultural: '', heredero: '' },
+    atributos: { fuerza: { valor: 0, tn: 20 }, corazon: { valor: 0, tn: 20 }, mente: { valor: 0, tn: 20 } },
+    estadisticas: { aguante: { maximo: 0, actual: 0 }, esperanza: { maxima: 0, actual: 0 }, parada: 0, cargaTotal: 0, fatiga: 0 },
+    estados: { cansado: false, desanimado: false, herido: false, diasDeHerida: 0 },
+    sombra: { puntos: 0, cicatrices: 0, senda: '', defectos: [] },
+    desarrollo: { valor: 1, sabiduria: 1, puntosHabilidad: 0, puntosAventura: 0, virtudes: [], recompensas: [] },
+    habilidades: { fuerza: { impresionar: { rango: 0, favorecida: false }, atletismo: { rango: 0, favorecida: false }, alerta: { rango: 0, favorecida: false }, cazar: { rango: 0, favorecida: false }, cantar: { rango: 0, favorecida: false }, oficio: { rango: 0, favorecida: false } }, corazon: { alentar: { rango: 0, favorecida: false }, viajar: { rango: 0, favorecida: false }, perspicacia: { rango: 0, favorecida: false }, curar: { rango: 0, favorecida: false }, cortesia: { rango: 0, favorecida: false }, guerrear: { rango: 0, favorecida: false } }, mente: { persuadir: { rango: 0, favorecida: false }, sigilo: { rango: 0, favorecida: false }, inspeccionar: { rango: 0, favorecida: false }, explorar: { rango: 0, favorecida: false }, acertijos: { rango: 0, favorecida: false }, saber: { rango: 0, favorecida: false } } },
+    combate: { competencias: { hachas: 0, arcos: 0, lanzas: 0, espadas: 0 }, equipoGuerra: [{ item: { tipoItem: '', nombre: '', subtipoItem: '', dano: 0, herida: 0, carga: 0, competencia: '', notas: '' } }] },
+    rasgosDistintivos: [], inventario: { objetosUtiles: [], equipoViaje: '', riqueza: 0 }, compania: { vinculoComunidad: '', puntuacionComunidad: 0, refugio: '' }
+});
+let adventurer = newAdventurer();
+let adventurerId = null;
+let savedAdventurers = [];
+let assignedAdventurerId = localStorage.getItem('tor_assigned_adventurer') || '';
+const getAt = (obj, path) => path.split('.').reduce((value, key) => value?.[key], obj);
+const setAt = (obj, path, value) => { const parts = path.split('.'); const key = parts.pop(); const target = parts.reduce((value, part) => value[part], obj); target[key] = value; };
+const newWarGearItem = () => ({ item: { tipoItem: '', nombre: '', subtipoItem: '', dano: 0, herida: 0, carga: 0, competencia: '', notas: '' } });
+const displayName = key => ({ fuerza: 'Fuerza', corazon: 'Corazón', mente: 'Mente', impresionar: 'Impresionar', atletismo: 'Atletismo', alerta: 'Alerta', cazar: 'Cazar', cantar: 'Cantar', oficio: 'Oficio', alentar: 'Alentar', viajar: 'Viajar', perspicacia: 'Perspicacia', curar: 'Curar', cortesia: 'Cortesía', guerrear: 'Guerrear', persuadir: 'Persuadir', sigilo: 'Sigilo', inspeccionar: 'Inspeccionar', explorar: 'Explorar', acertijos: 'Acertijos', saber: 'Saber', hachas: 'Hachas', arcos: 'Arcos', lanzas: 'Lanzas', espadas: 'Espadas' }[key] || key);
+
+function renderSheetDynamicFields() {
+    attributePanels.innerHTML = Object.entries(adventurer.habilidades).map(([attribute, skills]) => `<section class="attribute-panel"><h2 class="attribute-title">${displayName(attribute)}</h2><div class="attribute-stats"><label class="attribute-inline">Valor<input type="number" min="0" data-path="atributos.${attribute}.valor"></label><label class="attribute-inline" title="Número objetivo">NO<input type="number" min="0" data-path="atributos.${attribute}.tn" aria-label="Número objetivo"></label></div>${Object.keys(skills).map(skill => `<div class="skill-row"><span>${displayName(skill)}</span><input type="number" min="0" data-path="habilidades.${attribute}.${skill}.rango" aria-label="Rango de ${displayName(skill)}"><label title="Habilidad favorecida"><input type="checkbox" data-path="habilidades.${attribute}.${skill}.favorecida"> Fav.</label></div>`).join('')}</section>`).join('');
+    combatSkills.innerHTML = Object.keys(adventurer.combate.competencias).map(skill => `<label>${displayName(skill)}<input type="number" min="0" data-path="combate.competencias.${skill}"></label>`).join('');
+    if (!adventurer.combate.equipoGuerra.length) adventurer.combate.equipoGuerra.push(newWarGearItem());
+    warGearList.innerHTML = adventurer.combate.equipoGuerra.map((_, index) => `<div class="war-gear-entry"><div class="d-flex justify-content-between align-items-center mb-2"><span class="war-gear-title">Equipo ${index + 1}</span><button class="btn btn-link text-danger p-0 remove-war-gear-btn" type="button" data-gear-index="${index}" title="Eliminar equipo"><i class="fa-solid fa-trash-can"></i></button></div><div class="equipment-grid"><label>Nombre<input data-path="combate.equipoGuerra.${index}.item.nombre"></label><label>Tipo<input data-path="combate.equipoGuerra.${index}.item.tipoItem"></label><label>Subtipo<input data-path="combate.equipoGuerra.${index}.item.subtipoItem"></label><label>Competencia<input data-path="combate.equipoGuerra.${index}.item.competencia"></label><label>Daño<input type="number" min="0" data-path="combate.equipoGuerra.${index}.item.dano"></label><label>Herida<input type="number" min="0" data-path="combate.equipoGuerra.${index}.item.herida"></label><label>Carga<input type="number" min="0" data-path="combate.equipoGuerra.${index}.item.carga"></label><label class="wide">Notas<input data-path="combate.equipoGuerra.${index}.item.notas"></label></div></div>`).join('');
+}
+function fillAdventurerForm() { renderSheetDynamicFields(); adventurerForm.querySelectorAll('[data-path]').forEach(input => { const value = getAt(adventurer, input.dataset.path); input.checked = input.type === 'checkbox' && Boolean(value); input.value = input.dataset.list ? (value || []).join(', ') : (input.type === 'checkbox' ? '' : (value ?? '')); }); }
+function saveAdventurer() { localStorage.setItem(ADVENTURER_KEY, JSON.stringify(adventurer)); const status = document.getElementById('adventurer-save-status'); if (status) status.textContent = 'Borrador guardado en este dispositivo. Pulsa Guardar para sincronizarlo.'; }
+function loadAdventurer() { try { const saved = JSON.parse(localStorage.getItem(ADVENTURER_KEY)); if (saved) adventurer = saved; } catch (_) { adventurer = newAdventurer(); } fillAdventurerForm(); }
+function renderAdventurerSelects() {
+    const options = savedAdventurers.map(item => `<option value="${item._id}">${item.nombre}</option>`).join('');
+    if (sheetLibrarySelect) sheetLibrarySelect.innerHTML = `<option value="">Hojas guardadas…</option>${options}`;
+    if (adventurerSelect) { adventurerSelect.innerHTML = `<option value="">Sin personaje asignado</option>${options}`; adventurerSelect.value = assignedAdventurerId; }
+}
+async function fetchAdventurers() {
+    if (isLocalFile) return renderAdventurerSelects();
+    try { const response = await fetch('/api/adventurers'); if (!response.ok) throw new Error(); savedAdventurers = await response.json(); renderAdventurerSelects(); }
+    catch (_) { const status = document.getElementById('adventurer-save-status'); if (status) status.textContent = 'No se pudo conectar con la base de datos.'; }
+}
+async function saveAdventurerToDatabase() {
+    if (isLocalFile) { alert('Abre la aplicación desde el servidor para guardar fichas en la base de datos.'); return; }
+    if (!adventurer.informacionGeneral.nombre.trim()) {
+        const nameInput = adventurerForm.querySelector('[data-path="informacionGeneral.nombre"]');
+        nameInput.focus();
+        document.getElementById('adventurer-save-status').textContent = 'Escribe el nombre del aventurero antes de guardar.';
+        return;
+    }
+    const normalizedName = adventurer.informacionGeneral.nombre.trim().toLocaleLowerCase('es');
+    const duplicate = savedAdventurers.find(item => item._id !== adventurerId && item.nombre.trim().toLocaleLowerCase('es') === normalizedName);
+    if (duplicate) {
+        document.getElementById('adventurer-save-status').textContent = 'Ya existe una hoja con ese nombre. Cámbialo antes de guardar.';
+        return;
+    }
+    const status = document.getElementById('adventurer-save-status'); if (status) status.textContent = 'Guardando ficha…';
+    try {
+        const response = await fetch(adventurerId ? `/api/adventurers/${adventurerId}` : '/api/adventurers', { method: adventurerId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(adventurer) });
+        if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.error || 'No se pudo guardar la ficha en la base de datos.'); } const stored = await response.json(); adventurerId = stored._id; saveAdventurer(); if (status) status.textContent = 'Ficha guardada en la base de datos.'; await fetchAdventurers(); if (sheetLibrarySelect) sheetLibrarySelect.value = adventurerId;
+    } catch (error) { if (status) status.textContent = error.message; }
+}
+
+adventurerForm.addEventListener('input', event => { const input = event.target; if (!input.dataset.path) return; let value = input.type === 'checkbox' ? input.checked : input.value; if (input.type === 'number') value = Number(value || 0); if (input.dataset.list) value = value.split(',').map(item => item.trim()).filter(Boolean); setAt(adventurer, input.dataset.path, value); saveAdventurer(); });
+addWarGearBtn.addEventListener('click', () => { adventurer.combate.equipoGuerra.push(newWarGearItem()); fillAdventurerForm(); saveAdventurer(); });
+warGearList.addEventListener('click', event => { const button = event.target.closest('.remove-war-gear-btn'); if (!button) return; adventurer.combate.equipoGuerra.splice(Number(button.dataset.gearIndex), 1); fillAdventurerForm(); saveAdventurer(); });
+openAdventurerButtons.forEach(button => button.addEventListener('click', () => { loadAdventurer(); fetchAdventurers(); loginScreen.classList.add('d-none'); appScreen.classList.add('d-none'); adventurerScreen.classList.remove('d-none'); window.scrollTo(0, 0); }));
+closeAdventurerBtn.addEventListener('click', () => { adventurerScreen.classList.add('d-none'); (currentUser ? appScreen : loginScreen).classList.remove('d-none'); });
+exportAdventurerBtn.addEventListener('click', () => { const blob = new Blob([JSON.stringify(adventurer, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${adventurer.informacionGeneral.nombre || 'aventurero'}.json`; link.click(); URL.revokeObjectURL(link.href); });
+resetAdventurerBtn.addEventListener('click', () => { if (confirm('¿Reiniciar todos los campos de la ficha?')) { adventurer = newAdventurer(); saveAdventurer(); fillAdventurerForm(); } });
+adventurerImport.addEventListener('change', event => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { adventurer = JSON.parse(reader.result); adventurerId = null; saveAdventurer(); fillAdventurerForm(); } catch (_) { alert('El archivo no contiene un JSON de aventurero válido.'); } }; reader.readAsText(file); event.target.value = ''; });
+saveAdventurerBtn.addEventListener('click', saveAdventurerToDatabase);
+sheetLibrarySelect.addEventListener('change', event => { const record = savedAdventurers.find(item => item._id === event.target.value); if (!record) return; adventurer = record.ficha; adventurerId = record._id; saveAdventurer(); fillAdventurerForm(); });
+adventurerSelect.addEventListener('change', event => { assignedAdventurerId = event.target.value; localStorage.setItem('tor_assigned_adventurer', assignedAdventurerId); const record = savedAdventurers.find(item => item._id === assignedAdventurerId); if (!isLocalFile && currentRoom) socket.emit('update-user', { username: currentUser, stance: currentStance, adventurerId: assignedAdventurerId, adventurerName: record?.nombre || '' }); else renderLocalActiveUsers(); });
+
+// ==========================================
 // DICE SELECTION LOGIC (D12: 1-2, D6: 0-6)
 // ==========================================
 
@@ -324,6 +417,7 @@ if (useSuggestionBtn) {
 
 // Run on page load
 initLastSessionSuggestion();
+if (!isLocalFile) fetchAdventurers();
 
 // Join Room
 joinBtn.addEventListener('click', () => {
@@ -358,7 +452,9 @@ joinBtn.addEventListener('click', () => {
         socket.emit('join-room', {
             roomName: currentRoom,
             username: currentUser,
-            stance: currentStance
+            stance: currentStance,
+            adventurerId: assignedAdventurerId,
+            adventurerName: savedAdventurers.find(item => item._id === assignedAdventurerId)?.nombre || ''
         });
     }
 
@@ -433,7 +529,7 @@ leaveBtn.addEventListener('click', () => {
 
 // Helper for local file active users
 function renderLocalActiveUsers() {
-    renderUsersList([{ id: 'local', username: currentUser, stance: currentStance }]);
+    renderUsersList([{ id: 'local', username: currentUser, stance: currentStance, adventurerId: assignedAdventurerId, adventurerName: savedAdventurers.find(item => item._id === assignedAdventurerId)?.nombre || '' }]);
 }
 
 // Render active users list AND battlefield map zones
@@ -448,6 +544,7 @@ function renderUsersList(users) {
         users.forEach(userObj => {
             const username = typeof userObj === 'object' ? userObj.username : userObj;
             const stance = (typeof userObj === 'object' && userObj.stance) ? userObj.stance : 'Posición abierta';
+            const adventurerName = (typeof userObj === 'object' && userObj.adventurerName) ? userObj.adventurerName : '';
             const isMe = (userObj.id && socket && userObj.id === socket.id) || username === currentUser;
 
             const info = getStanceInfo(stance);
@@ -460,6 +557,7 @@ function renderUsersList(users) {
                     <i class="fa-solid ${isMe ? 'fa-user-shield text-gold' : 'fa-user text-muted'}"></i>
                     <span class="fw-bold text-dark text-truncate">${username}</span>
                     ${isMe ? '<span class="badge bg-purple user-you-badge">Tú</span>' : ''}
+                    ${adventurerName ? `<span class="small text-muted text-truncate" title="${adventurerName}"><i class="fa-solid fa-scroll me-1"></i>${adventurerName}</span>` : ''}
                 </div>
                 <span class="badge stance-badge ${info.className}" title="${stance}">
                     <i class="${info.icon} me-1"></i> ${info.short}
