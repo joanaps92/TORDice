@@ -25,6 +25,21 @@ const saveLocalHistory = (room, roll) => {
 // State
 let currentUser = "";
 let currentRoom = "";
+let currentStance = "Posición abierta";
+let currentD12Count = 1;
+let currentD6Count = 0;
+
+// Persistence helpers for last session
+const LAST_USER_KEY = 'rpg_last_username';
+const LAST_ROOM_KEY = 'rpg_last_room';
+const saveLastSession = (user, room) => {
+    localStorage.setItem(LAST_USER_KEY, user);
+    localStorage.setItem(LAST_ROOM_KEY, room);
+};
+const getLastSession = () => ({
+    user: localStorage.getItem(LAST_USER_KEY) || '',
+    room: localStorage.getItem(LAST_ROOM_KEY) || ''
+});
 
 // Elements
 const loginScreen = document.getElementById('login-screen');
@@ -35,26 +50,280 @@ const roomnameInput = document.getElementById('roomname');
 const userDisplay = document.getElementById('user-display');
 const roomDisplay = document.getElementById('room-display');
 
-const d12Range = document.getElementById('d12-range');
-const d6Range = document.getElementById('d6-range');
-const d12Val = document.getElementById('d12-val');
-const d6Val = document.getElementById('d6-val');
+// Dice Control Elements
+const d12ValBadge = document.getElementById('d12-val-badge');
+const d12Buttons = document.querySelectorAll('[data-d12]');
+const d6ValBadge = document.getElementById('d6-val-badge');
+const d6Chips = document.querySelectorAll('[data-d6]');
+const d6DecBtn = document.getElementById('d6-dec-btn');
+const d6IncBtn = document.getElementById('d6-inc-btn');
+const d6VisualPreview = document.getElementById('d6-visual-preview');
 const rollBtn = document.getElementById('roll-btn');
+const rollBtnLabel = document.getElementById('roll-btn-label');
+
 const historyList = document.getElementById('history-list');
 const roomList = document.getElementById('room-list');
 const roomListContainer = document.getElementById('room-list-container');
 const clearHistoryBtn = document.getElementById('clear-history-btn');
 const leaveBtn = document.getElementById('leave-btn');
 const activeUsersList = document.getElementById('active-users-list');
+const userCountBadge = document.getElementById('user-count-badge');
 
-// UI Handlers
-d12Range.addEventListener('input', (e) => {
-    d12Val.textContent = e.target.value;
+const changeUsernameInput = document.getElementById('change-username-input');
+const saveUsernameBtn = document.getElementById('save-username-btn');
+const stanceSelect = document.getElementById('stance-select');
+
+// Battlefield Map Elements
+const battlefieldToggleHeader = document.getElementById('battlefield-toggle-header');
+const toggleBattlefieldBtn = document.getElementById('toggle-battlefield-btn');
+const battlefieldCollapseBody = document.getElementById('battlefield-collapse-body');
+const playersVanguardia = document.getElementById('players-vanguardia');
+const playersAbierta = document.getElementById('players-abierta');
+const playersDefensiva = document.getElementById('players-defensiva');
+const playersRetaguardia = document.getElementById('players-retaguardia');
+const battleZones = document.querySelectorAll('.battle-stance-zone');
+
+// ==========================================
+// DICE SELECTION LOGIC (D12: 1-2, D6: 0-6)
+// ==========================================
+
+function updateRollButtonLabel() {
+    if (!rollBtnLabel) return;
+    const d6Text = currentD6Count > 0 ? ` + ${currentD6Count} D6` : '';
+    rollBtnLabel.textContent = `¡LANZAR DADOS! (${currentD12Count} D12${d6Text})`;
+}
+
+function setD12Count(val) {
+    currentD12Count = Math.max(1, Math.min(2, parseInt(val) || 1));
+    
+    d12Buttons.forEach(btn => {
+        const btnVal = parseInt(btn.getAttribute('data-d12'));
+        btn.classList.toggle('active', btnVal === currentD12Count);
+    });
+
+    if (d12ValBadge) {
+        d12ValBadge.textContent = `${currentD12Count} ${currentD12Count === 1 ? 'Dado' : 'Dados'}`;
+    }
+
+    updateRollButtonLabel();
+}
+
+function setD6Count(val) {
+    currentD6Count = Math.max(0, Math.min(6, parseInt(val) || 0));
+
+    d6Chips.forEach(chip => {
+        const chipVal = parseInt(chip.getAttribute('data-d6'));
+        chip.classList.toggle('active', chipVal === currentD6Count);
+    });
+
+    if (d6ValBadge) {
+        d6ValBadge.textContent = `${currentD6Count} ${currentD6Count === 1 ? 'Dado' : 'Dados'}`;
+    }
+
+    if (d6DecBtn) d6DecBtn.disabled = (currentD6Count <= 0);
+    if (d6IncBtn) d6IncBtn.disabled = (currentD6Count >= 6);
+
+    // Update Visual Dice Icons Preview
+    if (d6VisualPreview) {
+        d6VisualPreview.innerHTML = "";
+        if (currentD6Count === 0) {
+            d6VisualPreview.innerHTML = `<span class="text-muted small fst-italic">Sin dados D6</span>`;
+        } else {
+            for (let i = 1; i <= currentD6Count; i++) {
+                const dice = document.createElement('span');
+                dice.className = 'd6-mini-dice';
+                dice.innerHTML = '<i class="fa-solid fa-dice-six"></i>';
+                d6VisualPreview.appendChild(dice);
+            }
+        }
+    }
+
+    updateRollButtonLabel();
+}
+
+// Event Listeners for Dice Controls
+d12Buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        setD12Count(btn.getAttribute('data-d12'));
+    });
 });
 
-d6Range.addEventListener('input', (e) => {
-    d6Val.textContent = e.target.value;
+d6Chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+        setD6Count(chip.getAttribute('data-d6'));
+    });
 });
+
+if (d6DecBtn) {
+    d6DecBtn.addEventListener('click', () => {
+        setD6Count(currentD6Count - 1);
+    });
+}
+
+if (d6IncBtn) {
+    d6IncBtn.addEventListener('click', () => {
+        setD6Count(currentD6Count + 1);
+    });
+}
+
+// Initialize Dice values
+setD12Count(1);
+setD6Count(0);
+
+// ==========================================
+// COLLAPSIBLE BATTLEFIELD MAP
+// ==========================================
+
+function toggleBattlefield(forceState) {
+    if (!battlefieldCollapseBody) return;
+    const isCurrentlyCollapsed = battlefieldCollapseBody.classList.contains('is-collapsed');
+    const shouldCollapse = forceState !== undefined ? forceState : !isCurrentlyCollapsed;
+
+    battlefieldCollapseBody.classList.toggle('is-collapsed', shouldCollapse);
+    if (toggleBattlefieldBtn) {
+        toggleBattlefieldBtn.classList.toggle('is-collapsed', shouldCollapse);
+    }
+    localStorage.setItem('rpg_battlefield_collapsed', shouldCollapse ? 'true' : 'false');
+}
+
+if (battlefieldToggleHeader) {
+    battlefieldToggleHeader.addEventListener('click', () => toggleBattlefield());
+}
+
+if (toggleBattlefieldBtn) {
+    toggleBattlefieldBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleBattlefield();
+    });
+}
+
+// Restore collapsed state from localStorage if previously collapsed
+if (localStorage.getItem('rpg_battlefield_collapsed') === 'true') {
+    toggleBattlefield(true);
+}
+
+// Helper to get stance badge info
+function getStanceInfo(stance) {
+    switch (stance) {
+        case 'Posición de vanguardia':
+            return {
+                icon: 'fa-solid fa-khanda',
+                short: 'Vanguardia',
+                className: 'stance-badge-vanguardia'
+            };
+        case 'Posición defensiva':
+            return {
+                icon: 'fa-solid fa-shield',
+                short: 'Defensiva',
+                className: 'stance-badge-defensiva'
+            };
+        case 'Posición de retaguardia':
+            return {
+                icon: 'fa-solid fa-crosshairs',
+                short: 'Retaguardia',
+                className: 'stance-badge-retaguardia'
+            };
+        case 'Posición abierta':
+        default:
+            return {
+                icon: 'fa-solid fa-shield-halved',
+                short: 'Abierta',
+                className: 'stance-badge-abierta'
+            };
+    }
+}
+
+// Interactive Battlefield Map Zones - Click to switch stance
+battleZones.forEach(zone => {
+    zone.addEventListener('click', () => {
+        const targetStance = zone.getAttribute('data-stance');
+        if (targetStance && targetStance !== currentStance) {
+            currentStance = targetStance;
+            if (stanceSelect) {
+                stanceSelect.value = currentStance;
+            }
+            if (!isLocalFile) {
+                socket.emit('update-user', { username: currentUser, stance: currentStance });
+            } else {
+                renderLocalActiveUsers();
+            }
+        }
+    });
+});
+
+// Cambiar Nombre
+function handleUpdateUsername() {
+    const newName = changeUsernameInput.value.trim();
+    if (!newName) {
+        alert("Por favor, introduce un nombre válido.");
+        return;
+    }
+    if (newName === currentUser) {
+        return;
+    }
+
+    currentUser = newName;
+    userDisplay.innerHTML = `<i class="fa-solid fa-user me-1"></i> ${currentUser}`;
+
+    if (!isLocalFile) {
+        socket.emit('update-user', { username: currentUser, stance: currentStance });
+    } else {
+        renderLocalActiveUsers();
+    }
+}
+
+saveUsernameBtn.addEventListener('click', handleUpdateUsername);
+changeUsernameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        handleUpdateUsername();
+    }
+});
+
+// Cambiar Postura / Posición
+stanceSelect.addEventListener('change', (e) => {
+    currentStance = e.target.value;
+    if (!isLocalFile) {
+        socket.emit('update-user', { username: currentUser, stance: currentStance });
+    } else {
+        renderLocalActiveUsers();
+    }
+});
+
+// ==========================================
+// LAST SESSION SUGGESTION
+// ==========================================
+
+const quickSuggestionContainer = document.getElementById('quick-suggestion-container');
+const quickSuggestionText = document.getElementById('quick-suggestion-text');
+const useSuggestionBtn = document.getElementById('use-suggestion-btn');
+
+function initLastSessionSuggestion() {
+    const { user, room } = getLastSession();
+    if (!user && !room) return;
+
+    if (quickSuggestionContainer && quickSuggestionText) {
+        quickSuggestionText.textContent = `${user || '—'}  ·  ${room || '—'}`;
+        quickSuggestionContainer.classList.remove('d-none');
+    }
+}
+
+if (useSuggestionBtn) {
+    useSuggestionBtn.addEventListener('click', () => {
+        const { user, room } = getLastSession();
+        if (user && usernameInput) usernameInput.value = user;
+        if (room && roomnameInput) roomnameInput.value = room;
+        usernameInput.focus();
+        // Visual feedback
+        useSuggestionBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i> ¡Listo!';
+        setTimeout(() => {
+            useSuggestionBtn.innerHTML = '<i class="fa-solid fa-arrows-rotate me-1"></i> Cargar';
+        }, 1500);
+    });
+}
+
+// Run on page load
+initLastSessionSuggestion();
 
 // Join Room
 joinBtn.addEventListener('click', () => {
@@ -68,9 +337,14 @@ joinBtn.addEventListener('click', () => {
 
     currentUser = user;
     currentRoom = room;
+    currentStance = stanceSelect.value || "Posición abierta";
+
+    // Save last session for next time
+    saveLastSession(currentUser, currentRoom);
 
     userDisplay.innerHTML = `<i class="fa-solid fa-user me-1"></i> ${currentUser}`;
     roomDisplay.innerHTML = `<i class="fa-solid fa-fort-awesome me-1"></i> Sala: ${currentRoom}`;
+    changeUsernameInput.value = currentUser;
 
     if (isLocalFile) {
         // Mock join-room logic
@@ -79,8 +353,13 @@ joinBtn.addEventListener('click', () => {
         if (history.length === 0) renderEmptyMessage();
         else history.forEach(roll => addRollToUI(roll, false));
         scrollToBottom();
+        renderLocalActiveUsers();
     } else {
-        socket.emit('join-room', { roomName: currentRoom, username: currentUser });
+        socket.emit('join-room', {
+            roomName: currentRoom,
+            username: currentUser,
+            stance: currentStance
+        });
     }
 
     loginScreen.classList.add('d-none');
@@ -89,17 +368,13 @@ joinBtn.addEventListener('click', () => {
 
 // Roll Dice
 rollBtn.addEventListener('click', () => {
-    const d12Count = parseInt(d12Range.value);
-    const d6Count = parseInt(d6Range.value);
-
-    if (d12Count === 0 && d6Count === 0) {
-        alert("¡Selecciona al menos un dado para lanzar!");
-        return;
-    }
+    const d12Count = currentD12Count;
+    const d6Count = currentD6Count;
 
     const rollData = {
         room: currentRoom,
         user: currentUser,
+        stance: currentStance,
         d12Count,
         d6Count
     };
@@ -112,6 +387,7 @@ rollBtn.addEventListener('click', () => {
         const rollEntry = {
             id: Date.now(),
             user: currentUser,
+            stance: currentStance,
             d12Results,
             d6Results,
             total,
@@ -126,12 +402,6 @@ rollBtn.addEventListener('click', () => {
     } else {
         socket.emit('roll-dice', rollData);
     }
-
-    // Reset ranges after roll
-    d12Range.value = 0;
-    d6Range.value = 0;
-    d12Val.textContent = "0";
-    d6Val.textContent = "0";
 });
 
 // Clear History
@@ -151,8 +421,6 @@ clearHistoryBtn.addEventListener('click', () => {
 leaveBtn.addEventListener('click', () => {
     if (confirm("¿Seguro que quieres salir de la sala?")) {
         if (!isLocalFile) {
-            // Socket.io handles room leaving on disconnect or we can emit an event
-            // For simplicity and to reset all state, we'll reload
             window.location.reload();
         } else {
             loginScreen.classList.remove('d-none');
@@ -162,6 +430,114 @@ leaveBtn.addEventListener('click', () => {
         }
     }
 });
+
+// Helper for local file active users
+function renderLocalActiveUsers() {
+    renderUsersList([{ id: 'local', username: currentUser, stance: currentStance }]);
+}
+
+// Render active users list AND battlefield map zones
+function renderUsersList(users) {
+    if (userCountBadge) {
+        userCountBadge.textContent = users.length;
+    }
+
+    // 1. Render left panel list
+    if (activeUsersList) {
+        activeUsersList.innerHTML = "";
+        users.forEach(userObj => {
+            const username = typeof userObj === 'object' ? userObj.username : userObj;
+            const stance = (typeof userObj === 'object' && userObj.stance) ? userObj.stance : 'Posición abierta';
+            const isMe = (userObj.id && socket && userObj.id === socket.id) || username === currentUser;
+
+            const info = getStanceInfo(stance);
+
+            const card = document.createElement('div');
+            card.className = `adventurer-card d-flex align-items-center justify-content-between p-2 rounded ${isMe ? 'is-current-user' : ''}`;
+            
+            card.innerHTML = `
+                <div class="d-flex align-items-center gap-2 text-truncate">
+                    <i class="fa-solid ${isMe ? 'fa-user-shield text-gold' : 'fa-user text-muted'}"></i>
+                    <span class="fw-bold text-dark text-truncate">${username}</span>
+                    ${isMe ? '<span class="badge bg-purple user-you-badge">Tú</span>' : ''}
+                </div>
+                <span class="badge stance-badge ${info.className}" title="${stance}">
+                    <i class="${info.icon} me-1"></i> ${info.short}
+                </span>
+            `;
+
+            activeUsersList.appendChild(card);
+        });
+    }
+
+    // 2. Render Battlefield Map Stance Zones
+    if (playersVanguardia && playersAbierta && playersDefensiva && playersRetaguardia) {
+        playersVanguardia.innerHTML = "";
+        playersAbierta.innerHTML = "";
+        playersDefensiva.innerHTML = "";
+        playersRetaguardia.innerHTML = "";
+
+        const zoneCounts = {
+            'Posición de vanguardia': 0,
+            'Posición abierta': 0,
+            'Posición defensiva': 0,
+            'Posición de retaguardia': 0
+        };
+
+        // Highlight zones based on current user position
+        battleZones.forEach(zone => {
+            const zoneStance = zone.getAttribute('data-stance');
+            if (zoneStance === currentStance) {
+                zone.classList.add('is-my-zone');
+            } else {
+                zone.classList.remove('is-my-zone');
+            }
+        });
+
+        users.forEach(userObj => {
+            const username = typeof userObj === 'object' ? userObj.username : userObj;
+            const stance = (typeof userObj === 'object' && userObj.stance) ? userObj.stance : 'Posición abierta';
+            const isMe = (userObj.id && socket && userObj.id === socket.id) || username === currentUser;
+
+            const chip = document.createElement('div');
+            chip.className = `battle-player-chip ${isMe ? 'is-you' : ''}`;
+            chip.innerHTML = `
+                <i class="fa-solid ${isMe ? 'fa-user-shield text-gold-light' : 'fa-user text-muted'}"></i>
+                <span>${username}</span>
+                ${isMe ? '<span class="badge bg-gold text-dark ms-1" style="font-size: 0.6rem; padding: 2px 5px;">Tú</span>' : ''}
+            `;
+
+            if (stance === 'Posición de vanguardia') {
+                playersVanguardia.appendChild(chip);
+                zoneCounts['Posición de vanguardia']++;
+            } else if (stance === 'Posición defensiva') {
+                playersDefensiva.appendChild(chip);
+                zoneCounts['Posición defensiva']++;
+            } else if (stance === 'Posición de retaguardia') {
+                playersRetaguardia.appendChild(chip);
+                zoneCounts['Posición de retaguardia']++;
+            } else {
+                playersAbierta.appendChild(chip);
+                zoneCounts['Posición abierta']++;
+            }
+        });
+
+        // Add empty placeholder if no one in zone
+        if (zoneCounts['Posición de vanguardia'] === 0) {
+            playersVanguardia.innerHTML = '<span class="empty-zone-placeholder"><i class="fa-regular fa-circle-dot me-1"></i>Sin aventureros en vanguardia</span>';
+        }
+        if (zoneCounts['Posición abierta'] === 0) {
+            playersAbierta.innerHTML = '<span class="empty-zone-placeholder"><i class="fa-regular fa-circle-dot me-1"></i>Sin aventureros en posición abierta</span>';
+        }
+        if (zoneCounts['Posición defensiva'] === 0) {
+            playersDefensiva.innerHTML = '<span class="empty-zone-placeholder"><i class="fa-regular fa-circle-dot me-1"></i>Sin aventureros en posición defensiva</span>';
+        }
+        if (zoneCounts['Posición de retaguardia'] === 0) {
+            playersRetaguardia.innerHTML = '<span class="empty-zone-placeholder"><i class="fa-regular fa-circle-dot me-1"></i>Sin aventureros en retaguardia</span>';
+        }
+    }
+}
+
 
 // Socket Events
 socket.on('load-history', (history) => {
@@ -175,7 +551,6 @@ socket.on('load-history', (history) => {
 });
 
 socket.on('new-roll', (roll) => {
-    // Remove empty message if present
     const emptyMsg = document.querySelector('.empty-msg');
     if (emptyMsg) emptyMsg.remove();
 
@@ -196,18 +571,7 @@ socket.on('disconnect', () => {
 });
 
 socket.on('update-room-users', (users) => {
-    activeUsersList.innerHTML = "";
-    users.forEach(user => {
-        const badge = document.createElement('span');
-        badge.className = "badge bg-gold px-3 py-2";
-        badge.innerHTML = `<i class="fa-solid fa-user-shield me-1"></i> ${user}`;
-        if (user === currentUser) {
-            badge.classList.remove('bg-gold');
-            badge.classList.add('bg-purple');
-            badge.innerHTML += " (Tú)";
-        }
-        activeUsersList.appendChild(badge);
-    });
+    renderUsersList(users);
 });
 
 socket.on('room-deleted', () => {
@@ -243,7 +607,6 @@ socket.on('update-rooms', (rooms) => {
             if (confirm(`¿Eliminar la sala "${room}" y todo su historial?`)) {
                 if (isLocalFile) {
                     localStorage.removeItem(`rpg_history_${room}`);
-                    // En modo local no tenemos forma de actualizar la lista fácilmente sin un "server" simulado más complejo
                     item.remove();
                     if (roomList.children.length === 0) roomListContainer.classList.add('d-none');
                 } else {
@@ -290,10 +653,19 @@ function addRollToUI(roll, isNew) {
         ? `<div class="mb-2"><span class="text-muted small fw-bold">D6:</span> ${d6Results.map(r => `<span class="dice-badge me-1">${r}</span>`).join('')}</div>` 
         : '';
 
+    const stancePill = roll.stance ? (() => {
+        const info = getStanceInfo(roll.stance);
+        return `<span class="badge stance-badge ${info.className} ms-2" style="font-size: 0.7rem; font-weight: normal;"><i class="${info.icon} me-1"></i>${info.short}</span>`;
+    })() : '';
+
     card.innerHTML = `
         <div class="d-flex justify-content-between align-items-start">
             <div class="flex-grow-1">
-                <div class="fw-bold text-dark mb-1">${roll.user} <span class="text-muted fw-normal ms-2" style="font-size: 0.75rem;">${roll.timestamp}</span></div>
+                <div class="fw-bold text-dark mb-1 d-flex align-items-center flex-wrap">
+                    <span>${roll.user}</span>
+                    ${stancePill}
+                    <span class="text-muted fw-normal ms-2" style="font-size: 0.75rem;">${roll.timestamp}</span>
+                </div>
                 ${d12Str}
                 ${d6Str}
             </div>
@@ -339,3 +711,4 @@ function renderEmptyMessage() {
 function scrollToBottom() {
     historyList.scrollTop = historyList.scrollHeight;
 }
+

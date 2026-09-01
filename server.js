@@ -32,11 +32,15 @@ async function emitRoomList() {
     }
 }
 
-// Enviar lista de usuarios de una sala
+// Enviar lista de usuarios de una sala con sus posiciones
 function emitUserList(roomName) {
-    const usersInRoom = Object.values(activeUsers)
-        .filter(u => u.room === roomName)
-        .map(u => u.username);
+    const usersInRoom = Object.entries(activeUsers)
+        .filter(([id, u]) => u.room === roomName)
+        .map(([id, u]) => ({
+            id,
+            username: u.username,
+            stance: u.stance || 'Posición abierta'
+        }));
     io.to(roomName).emit('update-room-users', usersInRoom);
 }
 
@@ -45,11 +49,15 @@ io.on('connection', (socket) => {
 
     emitRoomList();
 
-    socket.on('join-room', async ({ roomName, username }) => {
+    socket.on('join-room', async ({ roomName, username, stance }) => {
         try {
             socket.join(roomName);
-            activeUsers[socket.id] = { username, room: roomName };
-            console.log(`Usuario ${username} unido a la sala: ${roomName}`);
+            activeUsers[socket.id] = {
+                username: username || 'Aventurero',
+                room: roomName,
+                stance: stance || 'Posición abierta'
+            };
+            console.log(`Usuario ${username} unido a la sala: ${roomName} con postura: ${activeUsers[socket.id].stance}`);
 
             const existing = await Room.findOne({ name: roomName });
             if (!existing) {
@@ -65,6 +73,24 @@ io.on('connection', (socket) => {
             emitUserList(roomName);
         } catch (err) {
             console.error('Error en join-room:', err);
+        }
+    });
+
+    socket.on('update-user', ({ username, stance }) => {
+        try {
+            const user = activeUsers[socket.id];
+            if (user) {
+                if (username && typeof username === 'string' && username.trim().length > 0) {
+                    user.username = username.trim();
+                }
+                if (stance && typeof stance === 'string') {
+                    user.stance = stance;
+                }
+                console.log(`Usuario ${socket.id} actualizado: ${user.username} - ${user.stance} en sala ${user.room}`);
+                emitUserList(user.room);
+            }
+        } catch (err) {
+            console.error('Error en update-user:', err);
         }
     });
 
@@ -100,7 +126,10 @@ io.on('connection', (socket) => {
 
     socket.on('roll-dice', async (payload) => {
         try {
-            const { room, user, d12Count, d6Count } = payload;
+            const { room, user, d12Count, d6Count, stance } = payload;
+            const currentUserObj = activeUsers[socket.id];
+            const senderName = user || currentUserObj?.username || 'Aventurero';
+            const senderStance = stance || currentUserObj?.stance || 'Posición abierta';
 
             const d12Results = Array.from({ length: d12Count }, () => Math.floor(Math.random() * 12) + 1);
             const d6Results = Array.from({ length: d6Count }, () => Math.floor(Math.random() * 6) + 1);
@@ -108,7 +137,8 @@ io.on('connection', (socket) => {
 
             const rollEntry = {
                 room,
-                user,
+                user: senderName,
+                stance: senderStance,
                 d12Results,
                 d6Results,
                 total,

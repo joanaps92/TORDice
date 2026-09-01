@@ -1,160 +1,819 @@
+/* =========================================================
+   EL ANILLO ÚNICO (THE ONE RING RPG) 2E - OFFICIAL RULEBOOK THEME
+   Inspired by TOR 2nd Edition Core Rulebook Layout (Devir / Free League)
+   ========================================================= */
+
 :root {
-    --accent: #2c3e50;
-    --accent-dark: #1a1a1a;
-    --purple: #4a4a4a;
-    --text-main: #2d3436;
-    --text-muted: #636e72;
-    --bg-paper: #f4ecd8;
-    --glass: rgba(255, 255, 255, 0.4);
-    --glass-border: rgba(0, 0, 0, 0.1);
+    /* The One Ring Official Color Palette */
+    --tor-red: #bc2c1a;
+    --tor-red-dark: #84160a;
+    --tor-red-light: #d83d28;
+    --tor-red-border: #c32717;
+    --tor-red-bg: rgba(188, 44, 26, 0.06);
+
+    --tor-gold: #c5a059;
+    --tor-gold-dark: #8c6d37;
+    --tor-gold-light: #f6ecd8;
+
+    --tor-ink: #1f1b18;
+    --tor-ink-muted: #5c554e;
+    --tor-ink-subtle: #857d75;
+
+    --tor-paper: #f7f2e7;
+    --tor-paper-card: #fffdf8;
+    --tor-paper-border: rgba(188, 44, 26, 0.35);
+
+    /* Legacy compatibility tokens */
+    --accent: var(--tor-red);
+    --accent-dark: var(--tor-red-dark);
+    --purple: #3f3935;
+    --text-main: var(--tor-ink);
+    --text-muted: var(--tor-ink-muted);
+    --bg-paper: var(--tor-paper);
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
 }
 
 body {
-    font-family: 'Inter', sans-serif;
-    background-color: var(--bg-paper);
-    background-image: 
-        radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, rgba(0,0,0,0.05) 100%),
+    font-family: 'Crimson Pro', Georgia, serif;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    background-color: var(--tor-paper);
+    background-image:
+        radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.5) 0%, rgba(225, 215, 195, 0.3) 100%),
         url("https://www.transparenttextures.com/patterns/parchment.png");
-    color: var(--text-main);
+    color: var(--tor-ink);
     min-height: 100vh;
-    overflow-x: hidden;
+}
+
+/* =========================================================
+   TYPOGRAPHY (Cinzel for Headers, Crimson Pro for Body)
+   ========================================================= */
+
+h1, h2, h3, h4, h5, h6,
+.font-cinzel,
+.section-title,
+.logo-text,
+.zone-title,
+.tor-label,
+.tor-badge-rule {
+    font-family: 'Cinzel', serif;
+    letter-spacing: 0.5px;
 }
 
 .logo-text {
-    font-family: 'MedievalSharp', cursive;
-    color: var(--accent-dark);
-    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
+    font-family: 'Cinzel', serif;
+    font-weight: 800;
+    color: var(--tor-red-dark);
     letter-spacing: 2px;
+    text-transform: uppercase;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .section-title {
-    font-family: 'MedievalSharp', cursive;
-    color: var(--text-main);
-    border-bottom: 2px solid var(--purple);
-    padding-bottom: 10px;
+    font-weight: 700;
+    color: var(--tor-red-dark);
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--tor-red-border);
+    padding-bottom: 6px;
     display: inline-block;
+    letter-spacing: 1px;
 }
 
+.tor-mini-header {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--tor-red);
+    text-transform: uppercase;
+}
+
+.tor-header-divider {
+    width: 60px;
+    height: 2px;
+    background: var(--tor-red-border);
+    margin: 8px auto 0 auto;
+}
+
+.tor-label {
+    font-weight: 700;
+    color: var(--tor-red-dark);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.font-serif {
+    font-family: 'Crimson Pro', Georgia, serif;
+}
+
+/* =========================================================
+   BOOK HEADER & ORNAMENTAL BANNERS
+   ========================================================= */
+
+.tor-page-header {
+    border-bottom: 2px solid var(--tor-red-border);
+    padding-bottom: 6px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--tor-red);
+    text-transform: uppercase;
+}
+
+.tor-header-tag {
+    white-space: nowrap;
+}
+
+.tor-header-ribbon {
+    height: 12px;
+    background-image: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 6px,
+        rgba(188, 44, 26, 0.25) 6px,
+        rgba(188, 44, 26, 0.25) 12px
+    );
+    border-top: 1px solid rgba(188, 44, 26, 0.4);
+    border-bottom: 1px solid rgba(188, 44, 26, 0.4);
+}
+
+.tor-page-footer {
+    border-top: 1px solid var(--tor-red-border);
+    color: var(--tor-red-dark);
+    font-family: 'Cinzel', serif;
+    letter-spacing: 1px;
+    font-size: 0.85rem;
+}
+
+.tor-leaf-flourish {
+    color: var(--tor-red);
+    font-size: 1.1rem;
+}
+
+/* =========================================================
+   RULEBOOK CARDS & CORNER ACCENTS
+   ========================================================= */
+
+.tor-book-panel,
 .glass-panel {
-    background: var(--glass);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
-    border-radius: 15px;
+    background: var(--tor-paper-card) !important;
+    border: 1.5px solid var(--tor-red-border) !important;
+    border-radius: 4px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(188, 44, 26, 0.1) !important;
+}
+
+/* Corner Ornaments in Rulebook Style */
+.tor-corner-tl,
+.tor-corner-tr,
+.tor-corner-bl,
+.tor-corner-br {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.tor-corner-tl {
+    top: 4px;
+    left: 4px;
+    border-top: 2px solid var(--tor-red);
+    border-left: 2px solid var(--tor-red);
+}
+
+.tor-corner-tr {
+    top: 4px;
+    right: 4px;
+    border-top: 2px solid var(--tor-red);
+    border-right: 2px solid var(--tor-red);
+}
+
+.tor-corner-bl {
+    bottom: 4px;
+    left: 4px;
+    border-bottom: 2px solid var(--tor-red);
+    border-left: 2px solid var(--tor-red);
+}
+
+.tor-corner-br {
+    bottom: 4px;
+    right: 4px;
+    border-bottom: 2px solid var(--tor-red);
+    border-right: 2px solid var(--tor-red);
 }
 
 .login-card {
     width: 100%;
-    max-width: 400px;
-    background: white;
-    border-radius: 20px;
+    max-width: 440px;
 }
 
+/* Form Controls in Rulebook Style */
+.tor-input,
+.tor-select,
+.form-control,
+.form-select {
+    background-color: #fffdf9 !important;
+    border: 1px solid #c5a059 !important;
+    color: var(--tor-ink) !important;
+    font-family: 'Crimson Pro', Georgia, serif !important;
+    font-size: 1.05rem !important;
+    border-radius: 4px !important;
+    transition: all 0.2s ease;
+}
+
+.tor-input:focus,
+.tor-select:focus,
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--tor-red) !important;
+    box-shadow: 0 0 0 0.2rem rgba(188, 44, 26, 0.15) !important;
+}
+
+/* =========================================================
+   BUTTONS (Rulebook Crimson & Gold)
+   ========================================================= */
+
+.btn-tor-primary,
 .btn-gold {
-    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-    color: #fff;
-    border: none;
-    transition: all 0.3s ease;
+    background: linear-gradient(180deg, #b82615 0%, #871409 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid #5a0c05 !important;
+    font-family: 'Cinzel', serif !important;
+    font-weight: 700 !important;
+    letter-spacing: 1px !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+    transition: all 0.2s ease !important;
+    text-transform: uppercase;
 }
 
+.btn-tor-primary:hover,
 .btn-gold:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(180deg, #cf2e1b 0%, #9e190d 100%) !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(184, 38, 21, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+.btn-tor-primary:active,
+.btn-gold:active {
+    transform: translateY(1px);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+.tor-leave-btn {
+    font-family: 'Cinzel', serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-radius: 4px;
+    border-color: var(--tor-red-border);
+    color: var(--tor-red);
+}
+
+.tor-leave-btn:hover {
+    background: var(--tor-red);
     color: #fff;
 }
 
+/* Badges */
 .bg-gold {
-    background-color: var(--accent) !important;
-    color: white !important;
+    background-color: var(--tor-red-dark) !important;
+    color: #ffffff !important;
+    font-family: 'Cinzel', serif;
+    letter-spacing: 0.5px;
 }
 
 .bg-purple {
-    background-color: var(--purple) !important;
-    color: white !important;
+    background-color: var(--tor-gold-dark) !important;
+    color: #ffffff !important;
+    font-family: 'Cinzel', serif;
+    letter-spacing: 0.5px;
+}
+
+.tor-badge-rule {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    color: var(--tor-red);
+    letter-spacing: 1px;
 }
 
 .text-gold {
-    color: var(--accent-dark);
+    color: var(--tor-red-dark) !important;
 }
 
-/* Room List Styling */
-.room-item {
-    cursor: pointer;
+/* =========================================================
+   DICE CONTROLS (Rulebook D12: 1-2, D6: 0-6)
+   ========================================================= */
+
+.dice-selector-card {
+    background: #fffefb;
+    border: 1px solid rgba(188, 44, 26, 0.25);
+    border-radius: 4px;
     transition: all 0.2s ease;
-    border: none !important;
-    color: var(--text-muted);
 }
 
-.room-item:hover {
-    background-color: #f1f2f6 !important;
-    color: var(--purple);
-    padding-left: 1.5rem !important;
+.dice-selector-card:hover {
+    border-color: var(--tor-red-border);
+    box-shadow: 0 2px 8px rgba(188, 44, 26, 0.08) !important;
 }
 
-/* Custom Range Input */
-.custom-range::-webkit-slider-thumb {
-    background: var(--accent);
-}
-.custom-range::-moz-range-thumb {
-    background: var(--accent);
+.tor-dice-title {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    color: var(--tor-red-dark);
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
 }
 
-/* Roll Entry Styling */
+/* D12 Button Group */
+.dice-d12-group .btn-dice-toggle {
+    background: #ffffff;
+    border: 1.5px solid #d1c7b7;
+    color: var(--tor-ink);
+    font-family: 'Cinzel', serif;
+    padding: 10px 12px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.dice-d12-group .btn-dice-toggle:hover {
+    background: #faf6ee;
+    border-color: var(--tor-red);
+}
+
+.dice-d12-group .btn-dice-toggle.active {
+    background: var(--tor-red);
+    color: #ffffff;
+    border-color: var(--tor-red-dark);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(188, 44, 26, 0.3);
+}
+
+.dice-d12-group .btn-dice-toggle.active .text-muted {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* D6 Number Chips */
+.dice-d6-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.btn-d6-chip {
+    background: #ffffff;
+    border: 1.5px solid #d1c7b7;
+    color: var(--tor-ink);
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 8px 4px;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-d6-chip:hover {
+    background: #faf6ee;
+    border-color: var(--tor-red);
+    color: var(--tor-red);
+}
+
+.btn-d6-chip.active {
+    background: var(--tor-red);
+    color: #ffffff;
+    border-color: var(--tor-red-dark);
+    box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(188, 44, 26, 0.3);
+    transform: scale(1.05);
+}
+
+.tor-stepper-btn {
+    border-color: #d1c7b7;
+    color: var(--tor-red-dark);
+    font-weight: 700;
+    border-radius: 4px;
+}
+
+.tor-stepper-btn:hover:not(:disabled) {
+    background: var(--tor-red);
+    color: #ffffff;
+    border-color: var(--tor-red);
+}
+
+.d6-mini-dice {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--tor-red);
+    font-size: 1.15rem;
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* =========================================================
+   ROLL HISTORY & CARDS
+   ========================================================= */
+
 .roll-card {
-    background: #fff;
-    border-left: 4px solid var(--purple);
-    border-radius: 8px;
-    margin-bottom: 15px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    background: #ffffff;
+    border: 1px solid rgba(188, 44, 26, 0.25);
+    border-left: 4px solid var(--tor-red);
+    border-radius: 4px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
     transition: transform 0.2s ease;
     animation: slideIn 0.3s ease-out;
 }
 
 .roll-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 12px rgba(188, 44, 26, 0.1);
 }
 
 .dice-badge {
-    padding: 5px 10px;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    background: #f1f2f6;
-    border: 1px solid #e1e2e6;
-    color: var(--text-main);
-    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    font-family: 'Cinzel', serif;
+}
+
+.dice-d12 {
+    background: linear-gradient(135deg, #b82615, #7a1208);
+    color: #fff;
+    border: 1px solid #5a0c05;
+}
+
+.dice-d6 {
+    background: #ffffff;
+    color: var(--tor-ink);
+    border: 1.5px solid var(--tor-gold-dark);
+}
+
+.dice-badge.dice-tor-gandalf {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border-color: #047857;
+    color: #fff;
+}
+
+.dice-badge.dice-tor-sauron {
+    background: linear-gradient(135deg, #1f1b18, #000000);
+    border-color: var(--tor-red);
+    color: #ef4444;
+}
+
+.dice-badge.dice-tor-tengwar {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border-color: #d97706;
+    color: #b45309;
 }
 
 .total-badge-container {
     display: flex;
-    gap: 10px;
+    align-items: center;
+    gap: 8px;
 }
 
 .total-badge {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: #f8f9fa;
-    padding: 5px 12px;
-    border-radius: 8px;
-    border: 1px solid #eee;
+    background: var(--tor-paper);
+    border: 1.5px solid var(--tor-red-border);
+    border-radius: 4px;
+    padding: 6px 12px;
+    text-align: center;
+    min-width: 65px;
 }
 
 .total-val {
+    font-family: 'Cinzel', serif;
     font-size: 1.4rem;
-    font-weight: bold;
-    color: var(--accent-dark);
-    font-family: 'MedievalSharp', cursive;
+    font-weight: 800;
+    color: var(--tor-red-dark);
     line-height: 1;
 }
 
 .total-label {
-    font-size: 0.6rem;
-    color: var(--text-muted);
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    color: var(--tor-ink-muted);
     font-weight: bold;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-/* Animations */
+/* =========================================================
+   ADVENTURERS PANEL
+   ========================================================= */
+
+.user-config-card {
+    background: #fffefb;
+    border: 1px solid rgba(188, 44, 26, 0.2);
+    border-radius: 4px;
+}
+
+.adventurer-card {
+    background: #ffffff;
+    border: 1px solid rgba(188, 44, 26, 0.2);
+    border-radius: 4px;
+    padding: 10px 14px;
+    transition: all 0.2s ease;
+}
+
+.adventurer-card:hover {
+    border-color: var(--tor-red);
+    box-shadow: 0 2px 6px rgba(188, 44, 26, 0.08);
+}
+
+.adventurer-name {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    color: var(--tor-ink);
+    font-size: 0.95rem;
+}
+
+/* Stance Badges */
+.stance-badge {
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.stance-badge-vanguardia {
+    background: rgba(188, 44, 26, 0.12);
+    color: var(--tor-red-dark);
+    border: 1px solid var(--tor-red);
+}
+
+.stance-badge-abierta {
+    background: rgba(197, 160, 89, 0.15);
+    color: #8c6200;
+    border: 1px solid #c5a059;
+}
+
+.stance-badge-defensiva {
+    background: rgba(37, 99, 235, 0.1);
+    color: #1d4ed8;
+    border: 1px solid #3b82f6;
+}
+
+.stance-badge-retaguardia {
+    background: rgba(22, 101, 52, 0.1);
+    color: #15803d;
+    border: 1px solid #22c55e;
+}
+
+/* =========================================================
+   BATTLEFIELD MAP (Styled exactly like TOR Book Page 96)
+   ========================================================= */
+
+.tor-stance-box {
+    background: rgba(255, 253, 248, 0.9);
+    border: 1.5px solid var(--tor-red-border);
+    position: relative;
+}
+
+.enemy-battle-zone {
+    background: linear-gradient(180deg, rgba(132, 22, 10, 0.95) 0%, rgba(66, 11, 5, 0.98) 100%);
+    border: 1.5px solid #ff5733;
+    color: #ffffff;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5), 0 4px 15px rgba(188, 44, 26, 0.25);
+    border-radius: 4px;
+}
+
+.sauron-battle-eye {
+    width: 60px;
+    height: 60px;
+    filter: drop-shadow(0 0 12px rgba(255, 87, 51, 0.9));
+    animation: eyePulse 3s infinite ease-in-out;
+}
+
+@keyframes eyePulse {
+    0%, 100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 8px rgba(255, 87, 51, 0.7));
+    }
+    50% {
+        transform: scale(1.06);
+        filter: drop-shadow(0 0 18px rgba(255, 170, 0, 1));
+    }
+}
+
+.enemy-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.3rem;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: #ffeedd;
+    text-shadow: 0 0 8px rgba(255, 87, 51, 0.6);
+}
+
+.enemy-subtitle {
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #ff9988;
+}
+
+.battle-direction-icon {
+    color: #ff7755;
+    font-size: 1rem;
+    animation: bounceDown 1.5s infinite;
+}
+
+@keyframes bounceDown {
+    0%, 100% { transform: translateY(0); opacity: 0.6; }
+    50% { transform: translateY(4px); opacity: 1; }
+}
+
+/* Battle Stance Zones */
+.battle-stance-zone {
+    background: #ffffff;
+    border: 1.5px solid rgba(188, 44, 26, 0.3);
+    border-radius: 4px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+}
+
+.battle-stance-zone:hover {
+    border-color: var(--tor-red);
+    box-shadow: 0 4px 14px rgba(188, 44, 26, 0.12);
+    transform: translateY(-1px);
+}
+
+.zone-title {
+    font-family: 'Cinzel', serif;
+    font-weight: 800;
+    color: var(--tor-red-dark);
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+}
+
+.zone-subtitle {
+    font-family: 'Crimson Pro', Georgia, serif;
+    font-size: 0.82rem;
+    font-style: italic;
+    font-weight: 600;
+    color: var(--tor-red);
+    letter-spacing: 0.5px;
+}
+
+.zone-tn-badge {
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+}
+
+.badge-tn-vanguardia {
+    background: rgba(188, 44, 26, 0.12);
+    color: var(--tor-red-dark);
+    border: 1px solid var(--tor-red);
+}
+
+.badge-tn-abierta {
+    background: rgba(197, 160, 89, 0.15);
+    color: #8c6200;
+    border: 1px solid #c5a059;
+}
+
+.badge-tn-defensiva {
+    background: rgba(37, 99, 235, 0.1);
+    color: #1d4ed8;
+    border: 1px solid #3b82f6;
+}
+
+.badge-tn-retaguardia {
+    background: rgba(22, 101, 52, 0.1);
+    color: #15803d;
+    border: 1px solid #22c55e;
+}
+
+/* Stance Zones Distinct Paper Tints */
+.stance-zone-vanguardia {
+    border-left: 5px solid var(--tor-red);
+    background: #fffcfb;
+}
+
+.stance-zone-abierta {
+    border-left: 5px solid var(--tor-gold-dark);
+    background: #fffdf8;
+}
+
+.stance-zone-defensiva {
+    border-left: 5px solid #2563eb;
+    background: #fbfdff;
+}
+
+.stance-zone-retaguardia {
+    border-left: 5px solid #16a34a;
+    background: #fbfdfb;
+}
+
+/* Player Tokens in Battlefield */
+.battle-player-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #ffffff;
+    color: var(--tor-ink);
+    border: 1.5px solid rgba(188, 44, 26, 0.35);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    animation: fadeIn 0.25s ease-out;
+}
+
+.battle-player-chip.is-you {
+    background: var(--tor-red);
+    color: #ffffff;
+    border-color: var(--tor-red-dark);
+    box-shadow: 0 2px 8px rgba(188, 44, 26, 0.35);
+}
+
+.battle-player-chip.is-you .text-gold-light {
+    color: #ffe6a0;
+}
+
+.empty-zone-placeholder {
+    color: var(--tor-ink-subtle);
+    font-family: 'Crimson Pro', Georgia, serif;
+    font-size: 0.9rem;
+    font-style: italic;
+    padding: 4px 0;
+}
+
+/* Collapsible Battlefield */
+.battlefield-collapse-content {
+    max-height: 1500px;
+    opacity: 1;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-in-out;
+    overflow: hidden;
+}
+
+.battlefield-collapse-content.is-collapsed {
+    max-height: 0 !important;
+    opacity: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.battlefield-toggle-btn {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-color: var(--tor-red-border);
+    color: var(--tor-red);
+    border-radius: 4px;
+    transition: all 0.25s ease;
+}
+
+.battlefield-toggle-btn:hover {
+    background: var(--tor-red);
+    color: #ffffff;
+}
+
+.battlefield-toggle-btn.is-collapsed #battlefield-chevron {
+    transform: rotate(180deg);
+}
+
+/* =========================================================
+   ANIMATIONS & SCROLLBAR
+   ========================================================= */
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
@@ -166,55 +825,109 @@ body {
 }
 
 .animate-fade-in {
-    animation: fadeIn 0.8s ease-out;
+    animation: fadeIn 0.6s ease-out;
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar {
     width: 6px;
 }
+
 ::-webkit-scrollbar-track {
     background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-    background: #ddd;
-    border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #ccc;
-}
-
-.cursor-pointer {
-    cursor: pointer;
-}
-
-.opacity-50 {
-    opacity: 0.5;
-}
-
-.hover-opacity-100:hover {
-    opacity: 1 !important;
-}
-
-.room-item:hover .flex-grow-1 {
-    color: var(--purple);
-}
-
-.total-badge.border-success {
-    border: 2px solid #28a745 !important;
-}
-
-.total-badge.border-danger {
-    border: 2px solid #dc3545 !important;
-}
-
-.dice-icon {
-    width: 20px;
-    height: 20px;
-    object-fit: contain;
-    vertical-align: middle;
-    background: #fff;
+    background: #d4c8b8;
     border-radius: 4px;
-    border: 1px solid #e1e2e6;
-    padding: 1px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--tor-red);
+}
+
+/* =========================================================
+   MOBILE RESPONSIVENESS & ORDERING (< 992px)
+   ========================================================= */
+
+@media (max-width: 991.98px) {
+    .row.g-4.mb-4 {
+        margin-bottom: 1.5rem !important;
+    }
+
+    #history-list {
+        max-height: 320px !important;
+    }
+
+    .dice-d6-grid {
+        gap: 3px;
+    }
+
+    .btn-d6-chip {
+        padding: 8px 4px;
+        font-size: 0.9rem;
+    }
+
+    .sauron-battle-eye {
+        width: 50px;
+        height: 50px;
+    }
+
+    .enemy-title {
+        font-size: 1.1rem;
+    }
+
+    .battle-stance-zone {
+        padding: 10px 12px;
+    }
+
+    .zone-title {
+        font-size: 0.88rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .navbar {
+        padding: 0.75rem !important;
+    }
+
+    .navbar .logo-text {
+        font-size: 1.25rem !important;
+        margin-bottom: 0.25rem;
+    }
+
+    .header-user-controls {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .header-badge {
+        max-width: 110px;
+        font-size: 0.75rem !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .dice-d12-group .btn-dice-toggle {
+        padding: 8px 6px;
+    }
+
+    .dice-d12-group .btn-dice-toggle span.fs-5 {
+        font-size: 1.1rem !important;
+    }
+
+    .total-badge-container {
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .total-badge {
+        padding: 4px 8px;
+    }
+
+    .total-val {
+        font-size: 1.2rem;
+    }
 }

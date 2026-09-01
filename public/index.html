@@ -3,34 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RPG Dice Room - Sala de Tiradas</title>
+    <title>El Anillo Único - Sala de Tiradas de Dados</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Google Fonts: Inter & MedievalSharp for RPG feel -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=MedievalSharp&display=swap" rel="stylesheet">
+    <!-- Google Fonts: Cinzel (Rulebook Headings), Crimson Pro (Rulebook Body Serif), MedievalSharp -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800;900&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600&family=MedievalSharp&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Login Screen -->
-    <div id="login-screen" class="container d-flex align-items-center justify-content-center min-vh-100">
-        <div class="card border-0 shadow-lg p-4 login-card animate-fade-in">
-            <h1 class="text-center mb-4 logo-text">RPG DICE ROOM</h1>
+    <div id="login-screen" class="container d-flex align-items-center justify-content-center min-vh-100 py-4">
+        <div class="card border-0 shadow-lg p-4 p-md-5 login-card animate-fade-in tor-book-panel position-relative">
+            <!-- Book Corner Accents -->
+            <div class="tor-corner-tl"></div>
+            <div class="tor-corner-tr"></div>
+            <div class="tor-corner-bl"></div>
+            <div class="tor-corner-br"></div>
+
+            <div class="text-center mb-4">
+                <div class="tor-mini-header mb-1">EL ANILLO ÚNICO RPG</div>
+                <h1 class="logo-text mb-1">SALA DE DADOS</h1>
+                <div class="tor-header-divider"></div>
+            </div>
+
             <div class="mb-3">
-                <label for="username" class="form-label fw-bold text-muted">Tu Nombre de Héroe</label>
-                <input type="text" class="form-control" id="username" placeholder="Ej. Gandalf el Gris">
+                <label for="username" class="form-label tor-label"><i class="fa-solid fa-feather-pointed me-1"></i> Nombre de tu Héroe</label>
+                <input type="text" class="form-control tor-input" id="username" placeholder="Ej. Aragorn, Gandalf...">
             </div>
-            <div class="mb-4">
-                <label for="roomname" class="form-label fw-bold text-muted">Nombre de la Sala</label>
-                <input type="text" class="form-control" id="roomname" placeholder="Ej. Mazmorra 1">
+            <div class="mb-3">
+                <label for="roomname" class="form-label tor-label"><i class="fa-solid fa-fort-awesome me-1"></i> Nombre de la Sala / Campaña</label>
+                <input type="text" class="form-control tor-input" id="roomname" placeholder="Ej. Campaña de Eriador">
             </div>
-            <button id="join-btn" class="btn btn-gold w-100 fw-bold py-2 mb-4">ENTRAR A LA AVENTURA</button>
+
+            <!-- Suggestion Banner for Last Used Hero & Room -->
+            <div id="quick-suggestion-container" class="mb-4 d-none">
+                <div class="p-2 px-3 rounded shadow-sm d-flex align-items-center justify-content-between gap-2" style="background: rgba(197, 160, 89, 0.15); border: 1px dashed #c5a059;">
+                    <div class="small overflow-hidden">
+                        <span class="d-block text-uppercase fw-bold text-danger" style="font-size: 0.7rem; font-family: 'Cinzel', serif; letter-spacing: 0.5px;">
+                            <i class="fa-solid fa-clock-rotate-left me-1"></i> Última sesión registrada:
+                        </span>
+                        <span id="quick-suggestion-text" class="fw-bold font-serif text-dark text-truncate d-block" style="font-size: 0.95rem;"></span>
+                    </div>
+                    <button id="use-suggestion-btn" type="button" class="btn btn-sm btn-outline-danger text-nowrap" style="font-size: 0.75rem; font-family: 'Cinzel', serif; font-weight: 700;">
+                        <i class="fa-solid fa-arrows-rotate me-1"></i> Cargar
+                    </button>
+                </div>
+            </div>
+
+            <button id="join-btn" class="btn btn-tor-primary w-100 py-2 mb-4">
+                <i class="fa-solid fa-dungeon me-2"></i>ENTRAR A LA AVENTURA
+            </button>
 
             <!-- Room List Section -->
             <div id="room-list-container" class="mt-2 d-none">
-                <h6 class="text-muted fw-bold mb-3 small uppercase tracking-wider">SALAS ACTIVAS</h6>
-                <div id="room-list" class="list-group list-group-flush rounded shadow-sm overflow-hidden">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="tor-label small text-uppercase tracking-wider"><i class="fa-solid fa-door-open me-1"></i> SALAS ACTIVAS</span>
+                </div>
+                <div id="room-list" class="list-group list-group-flush rounded shadow-sm overflow-hidden border">
                     <!-- Rooms will be listed here -->
                 </div>
             </div>
@@ -38,75 +71,301 @@
     </div>
 
     <!-- Main App Screen (Hidden initially) -->
-    <div id="app-screen" class="container-fluid py-4 d-none">
-        <nav class="navbar navbar-light mb-4 px-3 rounded shadow-sm glass-panel">
-            <span class="navbar-brand mb-0 h1 logo-text fs-3">RPG DICE ROOM</span>
-            <div class="d-flex align-items-center">
-                <span id="user-display" class="badge bg-gold text-dark me-3 fs-6"></span>
-                <span id="room-display" class="badge bg-purple me-3 fs-6"></span>
-                <button id="leave-btn" class="btn btn-outline-danger btn-sm ms-2">
-                    <i class="fa-solid fa-right-from-bracket"></i> Salir
+    <div id="app-screen" class="container-fluid px-3 px-md-4 py-3 py-md-4 d-none w-100 overflow-x-hidden">
+        
+        <!-- Book Page Top Header Banner -->
+        <div class="tor-page-header d-flex justify-content-between align-items-center mb-3 px-2">
+            <span class="tor-header-tag"><i class="fa-solid fa-book-open me-1"></i> CAPÍTULO 5</span>
+            <div class="tor-header-ribbon d-none d-sm-block flex-grow-1 mx-3"></div>
+            <span class="tor-header-tag">FASES DE AVENTURAS · COMBATE</span>
+        </div>
+
+        <!-- App Navigation Bar -->
+        <nav class="navbar navbar-light mb-4 p-3 rounded shadow-sm glass-panel tor-book-panel d-flex justify-content-between align-items-center flex-wrap gap-2 position-relative">
+            <div class="d-flex align-items-center gap-2">
+                <img src="sauron-eye.png" alt="Runa" class="tor-nav-rune" style="width: 26px; height: 26px; opacity: 0.85;">
+                <span class="navbar-brand mb-0 h1 logo-text fs-4 fs-md-3 me-0">EL ANILLO ÚNICO</span>
+            </div>
+            <div class="d-flex align-items-center flex-wrap gap-2 header-user-controls">
+                <span id="user-display" class="badge bg-gold text-dark fs-6 header-badge"></span>
+                <span id="room-display" class="badge bg-purple fs-6 header-badge"></span>
+                <button id="leave-btn" class="btn btn-outline-danger btn-sm tor-leave-btn" title="Abandonar la sala">
+                    <i class="fa-solid fa-right-from-bracket me-1"></i> Salir
                 </button>
             </div>
         </nav>
 
-        <div class="row g-4">
-            <!-- Controls Panel -->
-            <div class="col-lg-4">
-                <div class="card glass-panel h-100 border-0 p-4 shadow">
-                    <h3 class="mb-4 section-title"><i class="fa-solid fa-dice-d20 me-2"></i>Preparar Tirada</h3>
+        <!-- Main App Screen Grid (2x2 Layout) -->
+        <div class="row g-4 mb-4">
+            <!-- TOP-LEFT: Preparar Tirada -->
+            <div class="col-lg-5">
+                <div class="card glass-panel tor-book-panel h-100 border-0 p-4 shadow d-flex flex-column position-relative">
+                    <div class="tor-corner-tl"></div>
+                    <div class="tor-corner-tr"></div>
+                    <div class="tor-corner-bl"></div>
+                    <div class="tor-corner-br"></div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="mb-0 section-title"><i class="fa-solid fa-dice-d20 me-2 text-danger"></i>Preparar Tirada</h3>
+                        <span class="tor-badge-rule small">TIRADA DE ACCIÓN</span>
+                    </div>
                     
-                    <div class="dice-input-group mb-4">
-                        <label class="form-label d-flex justify-content-between">
-                            <span><i class="fa-solid fa-dice-d20 me-1"></i> Dados D12</span>
-                            <span id="d12-val" class="fw-bold text-gold">0</span>
-                        </label>
-                        <input type="range" class="form-range custom-range" id="d12-range" min="0" max="10" value="0">
+                    <!-- D12 Selector (1 o 2) -->
+                    <div class="dice-selector-card mb-3 p-3 rounded shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0 fw-bold d-flex align-items-center tor-dice-title">
+                                <i class="fa-solid fa-dice-d20 text-danger me-2 fs-5"></i>
+                                <span>Dado de Proeza (D12)</span>
+                            </label>
+                            <span class="badge bg-purple px-2 py-1" id="d12-val-badge">1 Dado</span>
+                        </div>
+                        <div class="btn-group w-100 dice-d12-group" role="group" aria-label="Selección de Dados D12">
+                            <button type="button" class="btn btn-dice-toggle active" data-d12="1" id="d12-btn-1">
+                                <span class="d-block fw-bold fs-5">1</span>
+                                <span class="small text-muted">Tirada Normal</span>
+                            </button>
+                            <button type="button" class="btn btn-dice-toggle" data-d12="2" id="d12-btn-2">
+                                <span class="d-block fw-bold fs-5">2</span>
+                                <span class="small text-muted">Favorecida / Desfavorecida</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="dice-input-group mb-4">
-                        <label class="form-label d-flex justify-content-between">
-                            <span><i class="fa-solid fa-dice-six me-1"></i> Dados D6</span>
-                            <span id="d6-val" class="fw-bold text-gold">0</span>
-                        </label>
-                        <input type="range" class="form-range custom-range" id="d6-range" min="0" max="10" value="0">
+                    <!-- D6 Selector (0 a 6) -->
+                    <div class="dice-selector-card mb-4 p-3 rounded shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0 fw-bold d-flex align-items-center tor-dice-title">
+                                <i class="fa-solid fa-dice-six text-danger me-2 fs-5"></i>
+                                <span>Dados de Éxito (D6)</span>
+                            </label>
+                            <span class="badge bg-gold text-dark px-2 py-1 fw-bold" id="d6-val-badge">0 Dados</span>
+                        </div>
+
+                        <!-- Botones directos 0..6 -->
+                        <div class="d-flex justify-content-between gap-1 mb-3 dice-d6-grid">
+                            <button type="button" class="btn btn-d6-chip active" data-d6="0">0</button>
+                            <button type="button" class="btn btn-d6-chip" data-d6="1">1</button>
+                            <button type="button" class="btn btn-d6-chip" data-d6="2">2</button>
+                            <button type="button" class="btn btn-d6-chip" data-d6="3">3</button>
+                            <button type="button" class="btn btn-d6-chip" data-d6="4">4</button>
+                            <button type="button" class="btn btn-d6-chip" data-d6="5">5</button>
+                            <button type="button" class="btn btn-d6-chip" data-d6="6">6</button>
+                        </div>
+
+                        <!-- Stepper y visor de dados -->
+                        <div class="d-flex align-items-center justify-content-between pt-1 border-top">
+                            <button type="button" class="btn btn-sm btn-outline-secondary px-3 py-1 tor-stepper-btn" id="d6-dec-btn" title="Restar 1 D6">
+                                <i class="fa-solid fa-minus"></i>
+                            </button>
+                            <div class="d-flex align-items-center gap-1 flex-wrap justify-content-center px-2" id="d6-visual-preview">
+                                <span class="text-muted small fst-italic">Sin dados de éxito</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary px-3 py-1 tor-stepper-btn" id="d6-inc-btn" title="Sumar 1 D6">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
                     </div>
 
-                    <button id="roll-btn" class="btn btn-gold btn-lg w-100 fw-bold mt-auto shadow-sm">
-                        <i class="fa-solid fa-hand-fist me-2"></i>¡LANZAR DADOS!
+                    <button id="roll-btn" class="btn btn-tor-primary btn-lg w-100 fw-bold mt-auto shadow-sm py-3">
+                        <i class="fa-solid fa-hand-fist me-2"></i><span id="roll-btn-label">¡LANZAR DADOS! (1 D12)</span>
                     </button>
                 </div>
+            </div>
 
-                <!-- Active Users Panel -->
-                <div class="card glass-panel mt-4 border-0 p-4 shadow">
-                    <h5 class="section-title mb-3"><i class="fa-solid fa-users me-2"></i>Aventureros</h5>
-                    <div id="active-users-list" class="d-flex flex-wrap gap-2">
+            <!-- TOP-RIGHT: Historial de la Sala -->
+            <div class="col-lg-7">
+                <div class="card glass-panel tor-book-panel h-100 border-0 shadow overflow-hidden d-flex flex-column position-relative">
+                    <div class="tor-corner-tl"></div>
+                    <div class="tor-corner-tr"></div>
+                    <div class="tor-corner-bl"></div>
+                    <div class="tor-corner-br"></div>
+
+                    <div class="card-header bg-transparent border-0 p-4 pb-0 d-flex justify-content-between align-items-center">
+                        <h3 class="section-title mb-0"><i class="fa-solid fa-scroll me-2 text-danger"></i>Historial de la Sala</h3>
+                        <div class="d-flex align-items-center gap-2">
+                            <button id="clear-history-btn" class="btn btn-outline-danger btn-sm" title="Reiniciar Sala">
+                                <i class="fa-solid fa-trash-can me-1"></i> Reiniciar
+                            </button>
+                            <span class="text-muted small tor-badge-rule">Últimas 50</span>
+                        </div>
+                    </div>
+                    <div id="history-list" class="card-body overflow-auto p-4 flex-grow-1" style="max-height: 380px; min-height: 280px;">
+                        <!-- Rolls will appear here -->
+                        <div class="text-center text-muted mt-5 py-5 empty-msg">
+                            <i class="fa-solid fa-feather fa-3x mb-3 d-block text-danger opacity-50"></i>
+                            <p class="font-serif fs-5">No hay tiradas aún en la crónica... ¡Sé el primero!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- BOTTOM-LEFT: Aventureros (debajo de Preparar Tirada) -->
+            <div class="col-lg-5">
+                <div class="card glass-panel tor-book-panel border-0 p-4 shadow h-100 position-relative">
+                    <div class="tor-corner-tl"></div>
+                    <div class="tor-corner-tr"></div>
+                    <div class="tor-corner-bl"></div>
+                    <div class="tor-corner-br"></div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="section-title mb-0"><i class="fa-solid fa-users me-2 text-danger"></i>Compañía de Aventureros</h5>
+                        <span id="user-count-badge" class="badge bg-purple rounded-pill px-2 py-1">0</span>
+                    </div>
+
+                    <!-- Configuración del Usuario Actual -->
+                    <div class="user-config-card p-3 mb-3 rounded shadow-sm">
+                        <div class="mb-3">
+                            <label for="change-username-input" class="form-label small fw-bold tor-label mb-1 d-flex align-items-center">
+                                <i class="fa-solid fa-user-pen me-1 text-danger"></i> Nombre de tu Héroe
+                            </label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" id="change-username-input" class="form-control tor-input" placeholder="Tu nombre...">
+                                <button id="save-username-btn" class="btn btn-tor-primary" type="button" title="Guardar nuevo nombre">
+                                    <i class="fa-solid fa-check"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="stance-select" class="form-label small fw-bold tor-label mb-1 d-flex align-items-center">
+                                <i class="fa-solid fa-shield-halved me-1 text-danger"></i> Posición en Combate
+                            </label>
+                            <select id="stance-select" class="form-select form-select-sm custom-stance-select tor-select">
+                                <option value="Posición de vanguardia">⚔️ Posición de vanguardia</option>
+                                <option value="Posición abierta" selected>⚖️ Posición abierta</option>
+                                <option value="Posición defensiva">🛡️ Posición defensiva</option>
+                                <option value="Posición de retaguardia">🏹 Posición de retaguardia</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Aventureros en la Sala -->
+                    <div id="active-users-list" class="d-flex flex-column gap-2">
                         <!-- User badges will appear here -->
                     </div>
                 </div>
             </div>
 
-            <!-- History Panel -->
-            <div class="col-lg-8">
-                <div class="card glass-panel h-100 border-0 shadow overflow-hidden">
-                    <div class="card-header bg-transparent border-0 p-4 pb-0 d-flex justify-content-between align-items-center">
-                        <h3 class="section-title mb-0"><i class="fa-solid fa-scroll me-2"></i>Historial de la Sala</h3>
-                        <div class="d-flex align-items-center gap-2">
-                            <button id="clear-history-btn" class="btn btn-outline-danger btn-sm" title="Reiniciar Sala">
-                                <i class="fa-solid fa-trash-can"></i> Reiniciar
+            <!-- BOTTOM-RIGHT: Campo de Batalla (a la derecha de Aventureros) -->
+            <div class="col-lg-7">
+                <div class="card glass-panel tor-book-panel border-0 shadow overflow-hidden battlefield-container h-100 position-relative" id="battlefield-card">
+                    <div class="tor-corner-tl"></div>
+                    <div class="tor-corner-tr"></div>
+                    <div class="tor-corner-bl"></div>
+                    <div class="tor-corner-br"></div>
+
+                    <div class="card-header bg-transparent border-0 p-4 pb-2 d-flex justify-content-between align-items-center flex-wrap gap-2 cursor-pointer" id="battlefield-toggle-header" role="button" title="Haz clic para plegar o desplegar el mapa">
+                        <div class="d-flex align-items-center gap-3">
+                            <h3 class="section-title mb-0">
+                                <i class="fa-solid fa-chess-board me-2 text-danger"></i>Campo de Batalla
+                            </h3>
+                            <button id="toggle-battlefield-btn" class="btn btn-sm btn-outline-dark rounded-circle battlefield-toggle-btn" type="button" aria-label="Colapsar o expandir mapa">
+                                <i class="fa-solid fa-chevron-up" id="battlefield-chevron"></i>
                             </button>
-                            <span class="text-muted small">Últimas 50</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-danger px-3 py-2 text-uppercase tracking-wider enemy-status-badge">
+                                <i class="fa-solid fa-eye me-1"></i> Frente al Enemigo
+                            </span>
                         </div>
                     </div>
-                    <div id="history-list" class="card-body overflow-auto p-4" style="max-height: 70vh;">
-                        <!-- Rolls will appear here -->
-                        <div class="text-center text-muted mt-5 py-5 empty-msg">
-                            <i class="fa-solid fa-ghost fa-3x mb-3 d-block"></i>
-                            <p>No hay tiradas aún... ¡Sé el primero!</p>
+
+                    <!-- Collapsible Content -->
+                    <div id="battlefield-collapse-body" class="battlefield-collapse-content show">
+                        <div class="card-body p-4 pt-0">
+                            <!-- Enemy / Sauron Section -->
+                            <div class="enemy-battle-zone text-center my-3 p-3 rounded position-relative">
+                                <div class="d-flex flex-column align-items-center justify-content-center">
+                                    <div class="sauron-eye-wrapper mb-2">
+                                        <img src="eye_of_sauron.png" alt="Ojo de Sauron" class="sauron-battle-eye">
+                                    </div>
+                                    <span class="enemy-title">EL OJO DE SAURON</span>
+                                    <span class="enemy-subtitle">FUERZAS DE LA SOMBRA</span>
+                                </div>
+                                <!-- Combat Direction Arrow -->
+                                <div class="battle-flow-indicator mt-2">
+                                    <i class="fa-solid fa-angles-down battle-direction-icon"></i>
+                                </div>
+                            </div>
+
+                            <!-- Stance Rules Box / Tactical Formation Grid (Styled like TOR Rulebook Page 96) -->
+                            <div class="tor-stance-box p-3 rounded mb-2">
+                                <div class="battlefield-grid d-flex flex-column gap-3">
+                                    <!-- Posición de Vanguardia (Frontline) -->
+                                    <div class="battle-stance-zone stance-zone-vanguardia" data-stance="Posición de vanguardia" id="zone-vanguardia" title="Haz clic para colocarte en Vanguardia">
+                                        <div class="zone-header d-flex justify-content-between align-items-start mb-1 flex-wrap gap-1">
+                                            <div>
+                                                <span class="zone-title"><i class="fa-solid fa-khanda me-1"></i> POSICIÓN DE VANGUARDIA</span>
+                                                <span class="zone-subtitle d-block">(COMBATE CUERPO A CUERPO)</span>
+                                            </div>
+                                            <span class="zone-tn-badge badge-tn-vanguardia">TN 6 · +1d / Intimidar</span>
+                                        </div>
+                                        <div class="zone-players d-flex flex-wrap gap-2 mt-2" id="players-vanguardia">
+                                            <!-- Player tokens will appear here -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Middle Row: Abierta & Defensiva (Melee line) -->
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <div class="battle-stance-zone stance-zone-abierta h-100" data-stance="Posición abierta" id="zone-abierta" title="Haz clic para colocarte en Posición Abierta">
+                                                <div class="zone-header d-flex justify-content-between align-items-start mb-1 flex-wrap gap-1">
+                                                    <div>
+                                                        <span class="zone-title"><i class="fa-solid fa-shield-halved me-1"></i> POSICIÓN ABIERTA</span>
+                                                        <span class="zone-subtitle d-block">(COMBATE CUERPO A CUERPO)</span>
+                                                    </div>
+                                                    <span class="zone-tn-badge badge-tn-abierta">TN 9 · Reagrupar</span>
+                                                </div>
+                                                <div class="zone-players d-flex flex-wrap gap-2 mt-2" id="players-abierta">
+                                                    <!-- Player tokens will appear here -->
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <div class="battle-stance-zone stance-zone-defensiva h-100" data-stance="Posición defensiva" id="zone-defensiva" title="Haz clic para colocarte en Posición Defensiva">
+                                                <div class="zone-header d-flex justify-content-between align-items-start mb-1 flex-wrap gap-1">
+                                                    <div>
+                                                        <span class="zone-title"><i class="fa-solid fa-shield me-1"></i> POSICIÓN DEFENSIVA</span>
+                                                        <span class="zone-subtitle d-block">(COMBATE CUERPO A CUERPO)</span>
+                                                    </div>
+                                                    <span class="zone-tn-badge badge-tn-defensiva">TN 12 · -1d / Proteger</span>
+                                                </div>
+                                                <div class="zone-players d-flex flex-wrap gap-2 mt-2" id="players-defensiva">
+                                                    <!-- Player tokens will appear here -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Posición de Retaguardia (Backline / Ranged) -->
+                                    <div class="battle-stance-zone stance-zone-retaguardia" data-stance="Posición de retaguardia" id="zone-retaguardia" title="Haz clic para colocarte en Retaguardia">
+                                        <div class="zone-header d-flex justify-content-between align-items-start mb-1 flex-wrap gap-1">
+                                            <div>
+                                                <span class="zone-title"><i class="fa-solid fa-crosshairs me-1"></i> POSICIÓN DE RETAGUARDIA</span>
+                                                <span class="zone-subtitle d-block">(COMBATE A DISTANCIA)</span>
+                                            </div>
+                                            <span class="zone-tn-badge badge-tn-retaguardia">A Distancia · Preparar Disparo</span>
+                                        </div>
+                                        <div class="zone-players d-flex flex-wrap gap-2 mt-2" id="players-retaguardia">
+                                            <!-- Player tokens will appear here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Rulebook Footer Page Number / Flourish -->
+        <div class="tor-page-footer text-center py-2 mt-3 text-muted small">
+            <span class="tor-leaf-flourish">🌿</span>
+            <span class="mx-2 fw-bold font-serif">EL ANILLO ÚNICO · SALA DE COMBATE</span>
+            <span class="tor-leaf-flourish">🌿</span>
         </div>
     </div>
 

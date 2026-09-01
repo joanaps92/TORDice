@@ -4,6 +4,7 @@ require('dotenv').config();
 const rollSchema = new mongoose.Schema({
   room:       { type: String, required: true, index: true },
   user:       { type: String, required: true },
+  stance:     { type: String },
   d12Results: { type: [Number], default: [] },
   d6Results:  { type: [Number], default: [] },
   total:      { type: Number, required: true },
