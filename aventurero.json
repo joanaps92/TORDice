@@ -1,0 +1,101 @@
+{
+  "_id": null,
+  "informacionGeneral": {
+    "nombre": "",
+    "culturaHeroica": "",
+    "ocupacion": "",
+    "nivelDeVida": "",
+    "edad": 0,
+    "bendicionCultural": "",
+    "heredero": ""
+  },
+  "atributos": {
+    "fuerza": { "valor": 0, "tn": 20 },
+    "corazon": { "valor": 0, "tn": 20 },
+    "mente": { "valor": 0, "tn": 20 }
+  },
+  "estadisticas": {
+    "aguante": { "maximo": 0, "actual": 0 },
+    "esperanza": { "maxima": 0, "actual": 0 },
+    "parada": 0,
+    "cargaTotal": 0,
+    "fatiga": 0
+  },
+  "estados": {
+    "cansado": false,
+    "desanimado": false,
+    "herido": false,
+    "diasDeHerida": 0
+  },
+  "sombra": {
+    "puntos": 0,
+    "cicatrices": 0,
+    "senda": "",
+    "defectos": []
+  },
+  "desarrollo": {
+    "valor": 1,
+    "sabiduria": 1,
+    "puntosHabilidad": 0,
+    "puntosAventura": 0,
+    "virtudes": [],
+    "recompensas": []
+  },
+  "habilidades": {
+    "fuerza": {
+      "impresionar": { "rango": 0, "favorecida": false },
+      "atletismo": { "rango": 0, "favorecida": false },
+      "alerta": { "rango": 0, "favorecida": false },
+      "cazar": { "rango": 0, "favorecida": false },
+      "cantar": { "rango": 0, "favorecida": false },
+      "oficio": { "rango": 0, "favorecida": false }
+    },
+    "corazon": {
+      "alentar": { "rango": 0, "favorecida": false },
+      "viajar": { "rango": 0, "favorecida": false },
+      "perspicacia": { "rango": 0, "favorecida": false },
+      "curar": { "rango": 0, "favorecida": false },
+      "cortesia": { "rango": 0, "favorecida": false },
+      "guerrear": { "rango": 0, "favorecida": false }
+    },
+    "mente": {
+      "persuadir": { "rango": 0, "favorecida": false },
+      "sigilo": { "rango": 0, "favorecida": false },
+      "inspeccionar": { "rango": 0, "favorecida": false },
+      "explorar": { "rango": 0, "favorecida": false },
+      "acertijos": { "rango": 0, "favorecida": false },
+      "saber": { "rango": 0, "favorecida": false }
+    }
+  },
+  "combate": {
+    "competencias": {
+      "hachas": 0,
+      "arcos": 0,
+      "lanzas": 0,
+      "espadas": 0
+    },
+    "equipoGuerra": [{
+        "item": {
+            "tipoItem": "",
+            "nombre": "",
+            "subtipoItem": "",
+            "dano": 0,
+            "herida": 0,
+            "carga": 0,
+            "competencia": "",
+            "notas": ""
+        }
+    }]
+  },
+  "rasgosDistintivos": [],
+  "inventario": {
+    "objetosUtiles": [],
+    "equipoViaje": "",
+    "riqueza": 0
+  },
+  "compania": {
+    "vinculoComunidad": "",
+    "puntuacionComunidad": 0,
+    "refugio": ""
+  }
+}

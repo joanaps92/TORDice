@@ -1,17 +1,17 @@
 const isLocalFile = window.location.protocol === 'file:';
 
 // Initialize socket with error handling
-let socket;
-if (isLocalFile) {
-    socket = { on: () => {}, emit: () => {}, connected: false };
-} else {
+let socket = { on: () => {}, emit: () => {}, connected: false };
+
+window.initSocket = function(token) {
+    if (isLocalFile) return;
     try {
-        socket = io();
+        socket = io({ auth: { token } });
+        setupSocketListeners();
     } catch (e) {
         console.error("Error al inicializar Socket.io:", e);
-        socket = { on: () => {}, emit: () => {}, connected: false };
     }
-}
+};
 
 // Mock persistence for local testing
 const getLocalHistory = (room) => JSON.parse(localStorage.getItem(`rpg_history_${room}`) || '[]');
@@ -42,10 +42,9 @@ const getLastSession = () => ({
 });
 
 // Elements
-const loginScreen = document.getElementById('login-screen');
+const roomSelectionScreen = document.getElementById('room-selection-screen');
 const appScreen = document.getElementById('app-screen');
 const joinBtn = document.getElementById('join-btn');
-const usernameInput = document.getElementById('username');
 const roomnameInput = document.getElementById('roomname');
 const userDisplay = document.getElementById('user-display');
 const roomDisplay = document.getElementById('room-display');
@@ -140,7 +139,13 @@ function renderAdventurerSelects() {
 }
 async function fetchAdventurers() {
     if (isLocalFile) return renderAdventurerSelects();
-    try { const response = await fetch('/api/adventurers'); if (!response.ok) throw new Error(); savedAdventurers = await response.json(); renderAdventurerSelects(); }
+    try { 
+        const token = localStorage.getItem('rpg_auth_token');
+        const response = await fetch('/api/adventurers', { headers: { 'Authorization': `Bearer ${token}` } }); 
+        if (!response.ok) throw new Error(); 
+        savedAdventurers = await response.json(); 
+        renderAdventurerSelects(); 
+    }
     catch (_) { const status = document.getElementById('adventurer-save-status'); if (status) status.textContent = 'No se pudo conectar con la base de datos.'; }
 }
 async function saveAdventurerToDatabase() {
@@ -159,7 +164,8 @@ async function saveAdventurerToDatabase() {
     }
     const status = document.getElementById('adventurer-save-status'); if (status) status.textContent = 'Guardando ficha…';
     try {
-        const response = await fetch(adventurerId ? `/api/adventurers/${adventurerId}` : '/api/adventurers', { method: adventurerId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(adventurer) });
+        const token = localStorage.getItem('rpg_auth_token');
+        const response = await fetch(adventurerId ? `/api/adventurers/${adventurerId}` : '/api/adventurers', { method: adventurerId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(adventurer) });
         if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.error || 'No se pudo guardar la ficha en la base de datos.'); } const stored = await response.json(); adventurerId = stored._id; saveAdventurer(); if (status) status.textContent = 'Ficha guardada en la base de datos.'; await fetchAdventurers(); if (sheetLibrarySelect) sheetLibrarySelect.value = adventurerId;
     } catch (error) { if (status) status.textContent = error.message; }
 }
@@ -167,8 +173,8 @@ async function saveAdventurerToDatabase() {
 adventurerForm.addEventListener('input', event => { const input = event.target; if (!input.dataset.path) return; let value = input.type === 'checkbox' ? input.checked : input.value; if (input.type === 'number') value = Number(value || 0); if (input.dataset.list) value = value.split(',').map(item => item.trim()).filter(Boolean); setAt(adventurer, input.dataset.path, value); saveAdventurer(); });
 addWarGearBtn.addEventListener('click', () => { adventurer.combate.equipoGuerra.push(newWarGearItem()); fillAdventurerForm(); saveAdventurer(); });
 warGearList.addEventListener('click', event => { const button = event.target.closest('.remove-war-gear-btn'); if (!button) return; adventurer.combate.equipoGuerra.splice(Number(button.dataset.gearIndex), 1); fillAdventurerForm(); saveAdventurer(); });
-openAdventurerButtons.forEach(button => button.addEventListener('click', () => { loadAdventurer(); fetchAdventurers(); loginScreen.classList.add('d-none'); appScreen.classList.add('d-none'); adventurerScreen.classList.remove('d-none'); window.scrollTo(0, 0); }));
-closeAdventurerBtn.addEventListener('click', () => { adventurerScreen.classList.add('d-none'); (currentUser ? appScreen : loginScreen).classList.remove('d-none'); });
+openAdventurerButtons.forEach(button => button.addEventListener('click', () => { loadAdventurer(); fetchAdventurers(); roomSelectionScreen.classList.add('d-none'); appScreen.classList.add('d-none'); adventurerScreen.classList.remove('d-none'); window.scrollTo(0, 0); }));
+closeAdventurerBtn.addEventListener('click', () => { adventurerScreen.classList.add('d-none'); (currentRoom ? appScreen : roomSelectionScreen).classList.remove('d-none'); });
 exportAdventurerBtn.addEventListener('click', () => { const blob = new Blob([JSON.stringify(adventurer, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${adventurer.informacionGeneral.nombre || 'aventurero'}.json`; link.click(); URL.revokeObjectURL(link.href); });
 resetAdventurerBtn.addEventListener('click', () => { if (confirm('¿Reiniciar todos los campos de la ficha?')) { adventurer = newAdventurer(); saveAdventurer(); fillAdventurerForm(); } });
 adventurerImport.addEventListener('change', event => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { adventurer = JSON.parse(reader.result); adventurerId = null; saveAdventurer(); fillAdventurerForm(); } catch (_) { alert('El archivo no contiene un JSON de aventurero válido.'); } }; reader.readAsText(file); event.target.value = ''; });
@@ -392,21 +398,20 @@ const quickSuggestionText = document.getElementById('quick-suggestion-text');
 const useSuggestionBtn = document.getElementById('use-suggestion-btn');
 
 function initLastSessionSuggestion() {
-    const { user, room } = getLastSession();
-    if (!user && !room) return;
+    const { room } = getLastSession();
+    if (!room) return;
 
     if (quickSuggestionContainer && quickSuggestionText) {
-        quickSuggestionText.textContent = `${user || '—'}  ·  ${room || '—'}`;
+        quickSuggestionText.textContent = `${window.currentUser || '—'}  ·  ${room}`;
         quickSuggestionContainer.classList.remove('d-none');
     }
 }
 
 if (useSuggestionBtn) {
     useSuggestionBtn.addEventListener('click', () => {
-        const { user, room } = getLastSession();
-        if (user && usernameInput) usernameInput.value = user;
+        const { room } = getLastSession();
         if (room && roomnameInput) roomnameInput.value = room;
-        usernameInput.focus();
+        if (roomnameInput) roomnameInput.focus();
         // Visual feedback
         useSuggestionBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i> ¡Listo!';
         setTimeout(() => {
@@ -421,11 +426,11 @@ if (!isLocalFile) fetchAdventurers();
 
 // Join Room
 joinBtn.addEventListener('click', () => {
-    const user = usernameInput.value.trim();
+    const user = window.currentUser || currentUser;
     const room = roomnameInput.value.trim();
 
     if (!user || !room) {
-        alert("Por favor, introduce tu nombre y el nombre de la sala.");
+        alert("Por favor, escribe el nombre de la sala a la que deseas entrar.");
         return;
     }
 
@@ -458,7 +463,7 @@ joinBtn.addEventListener('click', () => {
         });
     }
 
-    loginScreen.classList.add('d-none');
+    roomSelectionScreen.classList.add('d-none');
     appScreen.classList.remove('d-none');
 });
 
@@ -519,7 +524,7 @@ leaveBtn.addEventListener('click', () => {
         if (!isLocalFile) {
             window.location.reload();
         } else {
-            loginScreen.classList.remove('d-none');
+            roomSelectionScreen.classList.remove('d-none');
             appScreen.classList.add('d-none');
             currentUser = "";
             currentRoom = "";
@@ -558,93 +563,6 @@ function renderUsersList(users) {
                     <span class="fw-bold text-dark text-truncate">${username}</span>
                     ${isMe ? '<span class="badge bg-purple user-you-badge">Tú</span>' : ''}
                     ${adventurerName ? `<span class="small text-muted text-truncate" title="${adventurerName}"><i class="fa-solid fa-scroll me-1"></i>${adventurerName}</span>` : ''}
-                </div>
-                <span class="badge stance-badge ${info.className}" title="${stance}">
-                    <i class="${info.icon} me-1"></i> ${info.short}
-                </span>
-            `;
-
-            activeUsersList.appendChild(card);
-        });
-    }
-
-    // 2. Render Battlefield Map Stance Zones
-    if (playersVanguardia && playersAbierta && playersDefensiva && playersRetaguardia) {
-        playersVanguardia.innerHTML = "";
-        playersAbierta.innerHTML = "";
-        playersDefensiva.innerHTML = "";
-        playersRetaguardia.innerHTML = "";
-
-        const zoneCounts = {
-            'Posición de vanguardia': 0,
-            'Posición abierta': 0,
-            'Posición defensiva': 0,
-            'Posición de retaguardia': 0
-        };
-
-        // Highlight zones based on current user position
-        battleZones.forEach(zone => {
-            const zoneStance = zone.getAttribute('data-stance');
-            if (zoneStance === currentStance) {
-                zone.classList.add('is-my-zone');
-            } else {
-                zone.classList.remove('is-my-zone');
-            }
-        });
-
-        users.forEach(userObj => {
-            const username = typeof userObj === 'object' ? userObj.username : userObj;
-            const stance = (typeof userObj === 'object' && userObj.stance) ? userObj.stance : 'Posición abierta';
-            const isMe = (userObj.id && socket && userObj.id === socket.id) || username === currentUser;
-
-            const chip = document.createElement('div');
-            chip.className = `battle-player-chip ${isMe ? 'is-you' : ''}`;
-            chip.innerHTML = `
-                <i class="fa-solid ${isMe ? 'fa-user-shield text-gold-light' : 'fa-user text-muted'}"></i>
-                <span>${username}</span>
-                ${isMe ? '<span class="badge bg-gold text-dark ms-1" style="font-size: 0.6rem; padding: 2px 5px;">Tú</span>' : ''}
-            `;
-
-            if (stance === 'Posición de vanguardia') {
-                playersVanguardia.appendChild(chip);
-                zoneCounts['Posición de vanguardia']++;
-            } else if (stance === 'Posición defensiva') {
-                playersDefensiva.appendChild(chip);
-                zoneCounts['Posición defensiva']++;
-            } else if (stance === 'Posición de retaguardia') {
-                playersRetaguardia.appendChild(chip);
-                zoneCounts['Posición de retaguardia']++;
-            } else {
-                playersAbierta.appendChild(chip);
-                zoneCounts['Posición abierta']++;
-            }
-        });
-
-        // Add empty placeholder if no one in zone
-        if (zoneCounts['Posición de vanguardia'] === 0) {
-            playersVanguardia.innerHTML = '<span class="empty-zone-placeholder"><i class="fa-regular fa-circle-dot me-1"></i>Sin aventureros en vanguardia</span>';
-        }
-        if (zoneCounts['Posición abierta'] === 0) {
-            playersAbierta.innerHTML = '<span class="empty-zone-placeholder"><i class="fa-regular fa-circle-dot me-1"></i>Sin aventureros en posición abierta</span>';
-        }
-        if (zoneCounts['Posición defensiva'] === 0) {
-            playersDefensiva.innerHTML = '<span class="empty-zone-placeholder"><i class="fa-regular fa-circle-dot me-1"></i>Sin aventureros en posición defensiva</span>';
-        }
-        if (zoneCounts['Posición de retaguardia'] === 0) {
-            playersRetaguardia.innerHTML = '<span class="empty-zone-placeholder"><i class="fa-regular fa-circle-dot me-1"></i>Sin aventureros en retaguardia</span>';
-        }
-    }
-}
-
-
-// Socket Events
-socket.on('load-history', (history) => {
-    historyList.innerHTML = "";
-    if (history.length === 0) {
-        renderEmptyMessage();
-    } else {
-        history.forEach(roll => addRollToUI(roll, false));
-        scrollToBottom();
     }
 });
 
@@ -677,7 +595,7 @@ socket.on('room-deleted', () => {
     window.location.reload();
 });
 
-socket.on('update-rooms', (rooms) => {
+    socket.on('update-rooms', (rooms) => {
     if (rooms.length === 0) {
         roomListContainer.classList.add('d-none');
         return;
@@ -717,7 +635,9 @@ socket.on('update-rooms', (rooms) => {
         item.appendChild(deleteBtn);
         roomList.appendChild(item);
     });
-});
+        });
+    });
+}
 
 function addRollToUI(roll, isNew) {
     const card = document.createElement('div');

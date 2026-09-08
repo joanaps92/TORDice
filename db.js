@@ -16,6 +16,15 @@ const roomSchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true }
 });
 
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true, trim: true },
+  password: { type: String, required: true },
+  email: { type: String, trim: true, default: '' },
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  resetPasswordCode: { type: String },
+  resetPasswordExpires: { type: Date }
+});
+
 // La ficha se mantiene flexible para poder conservar el JSON completo del aventurero.
 const adventurerSchema = new mongoose.Schema({
   nombre: { type: String, required: true, trim: true },
@@ -27,10 +36,11 @@ const adventurerSchema = new mongoose.Schema({
 const Roll = mongoose.model('Roll', rollSchema);
 const Room = mongoose.model('Room', roomSchema);
 const Adventurer = mongoose.model('Adventurer', adventurerSchema);
+const User = mongoose.model('User', userSchema);
 
 async function connectDB() {
   await mongoose.connect(process.env.MONGODB_URI);
   console.log('Conectado a MongoDB');
 }
 
-module.exports = { connectDB, Roll, Room, Adventurer };
+module.exports = { connectDB, Roll, Room, Adventurer, User };

@@ -987,3 +987,11 @@ h1, h2, h3, h4, h5, h6,
 .sheet-footer { border-top: 1px solid var(--tor-red-border); display: flex; justify-content: space-between; padding: 10px 24px; color: var(--tor-ink-muted); font: italic 1rem 'Crimson Pro', serif; }
 @media (max-width: 1050px) { .sheet-content { grid-template-columns: 1fr 1fr; }.sheet-sidebar { grid-column: 1 / 3; grid-row: auto; display:grid; grid-template-columns: 1.3fr 1fr 1fr; }.portrait-panel { min-height: 0; }.sheet-travel { grid-column: 1 / 3; }.sheet-travel .stat-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 700px) { .adventurer-screen { padding: 7px; }.sheet-header { grid-template-columns: 1fr; padding: 8px 14px; }.sheet-back { justify-self: center; }.sheet-actions { justify-content: center; }.sheet-content { display: block; padding: 8px; }.sheet-content > *, .sheet-sidebar { margin-bottom: 12px; }.attribute-panels { grid-template-columns: 1fr; }.attribute-panel { border-right: 0; border-bottom: 1px solid var(--tor-red-border); }.sheet-sidebar { display: flex; }.identity-grid, .stat-grid, .equipment-grid { grid-template-columns: 1fr 1fr; }.identity-grid .wide, .equipment-grid .wide { grid-column: span 2; }.sheet-general, .sheet-combat, .sheet-travel { grid-column: auto; }.combat-skills { grid-template-columns: repeat(2, 1fr); }.sheet-footer { padding: 9px 14px; } }
+
+.dice-icon {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    vertical-align: middle;
+}
+
