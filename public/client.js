@@ -1,5 +1,43 @@
 const isLocalFile = window.location.protocol === 'file:';
 
+// Bootstrap-based feedback used throughout the app instead of browser-native dialogs.
+function showBootstrapModal(id) {
+    const element = document.getElementById(id);
+    if (!element || !window.bootstrap) return null;
+    return bootstrap.Modal.getOrCreateInstance(element);
+}
+
+window.appAlert = function(message, title = 'Aviso') {
+    const modal = showBootstrapModal('appFeedbackModal');
+    if (!modal) return Promise.resolve();
+    document.getElementById('app-feedback-title').textContent = title;
+    document.getElementById('app-feedback-message').textContent = message;
+    return new Promise(resolve => {
+        const element = document.getElementById('appFeedbackModal');
+        element.addEventListener('hidden.bs.modal', resolve, { once: true });
+        modal.show();
+    });
+};
+
+window.appConfirm = function(message, title = 'Confirmar') {
+    const modal = showBootstrapModal('appConfirmModal');
+    if (!modal) return Promise.resolve(false);
+    const element = document.getElementById('appConfirmModal');
+    const finish = value => {
+        element.dataset.confirmResult = value ? 'true' : 'false';
+        modal.hide();
+    };
+    document.getElementById('app-confirm-title').textContent = title;
+    document.getElementById('app-confirm-message').textContent = message;
+    document.getElementById('app-confirm-ok').onclick = () => finish(true);
+    document.getElementById('app-confirm-cancel').onclick = () => finish(false);
+    element.querySelector('.btn-close').onclick = () => finish(false);
+    return new Promise(resolve => {
+        element.addEventListener('hidden.bs.modal', () => resolve(element.dataset.confirmResult === 'true'), { once: true });
+        modal.show();
+    });
+};
+
 // Initialize socket with error handling
 let socket = { on: () => {}, emit: () => {}, connected: false };
 
@@ -101,6 +139,13 @@ const saveAdventurerBtn = document.getElementById('save-adventurer-btn');
 const sheetLibrarySelect = document.getElementById('sheet-library-select');
 const adventurerSelect = document.getElementById('adventurer-select');
 const ADVENTURER_KEY = 'tor_adventurer_draft';
+const calculatedEditablePaths = new Set([
+    'atributos.fuerza.tn', 'atributos.corazon.tn', 'atributos.mente.tn',
+    'estadisticas.aguante.maximo', 'estadisticas.aguante.actual',
+    'estadisticas.esperanza.maxima', 'estadisticas.esperanza.actual',
+    'estadisticas.parada', 'estadisticas.cargaTotal', 'sombra.senda'
+]);
+let calculatedOverrides = new Set();
 
 const newAdventurer = () => ({
     _id: null,
@@ -125,7 +170,7 @@ const newWarGearItem = () => ({ item: { tipoItem: '', nombre: '', subtipoItem: '
 const displayName = key => ({ fuerza: 'Fuerza', corazon: 'Corazón', mente: 'Mente', impresionar: 'Impresionar', atletismo: 'Atletismo', alerta: 'Alerta', cazar: 'Cazar', cantar: 'Cantar', oficio: 'Oficio', alentar: 'Alentar', viajar: 'Viajar', perspicacia: 'Perspicacia', curar: 'Curar', cortesia: 'Cortesía', guerrear: 'Guerrear', persuadir: 'Persuadir', sigilo: 'Sigilo', inspeccionar: 'Inspeccionar', explorar: 'Explorar', acertijos: 'Acertijos', saber: 'Saber', hachas: 'Hachas', arcos: 'Arcos', lanzas: 'Lanzas', espadas: 'Espadas' }[key] || key);
 
 function renderSheetDynamicFields() {
-    attributePanels.innerHTML = Object.entries(adventurer.habilidades).map(([attribute, skills]) => `<section class="attribute-panel"><h2 class="attribute-title">${displayName(attribute)}</h2><div class="attribute-stats"><label class="attribute-inline">Valor<input type="number" min="0" data-path="atributos.${attribute}.valor"></label><label class="attribute-inline" title="Número objetivo">NO<input type="number" min="0" data-path="atributos.${attribute}.tn" aria-label="Número objetivo" readonly></label></div>${Object.keys(skills).map(skill => `<div class="skill-row"><span>${displayName(skill)}</span><input type="number" min="0" data-path="habilidades.${attribute}.${skill}.rango" aria-label="Rango de ${displayName(skill)}"><label title="Habilidad favorecida"><input type="checkbox" data-path="habilidades.${attribute}.${skill}.favorecida"> Fav.</label></div>`).join('')}</section>`).join('');
+    attributePanels.innerHTML = Object.entries(adventurer.habilidades).map(([attribute, skills]) => `<section class="attribute-panel"><h2 class="attribute-title">${displayName(attribute)}</h2><div class="attribute-stats"><label class="attribute-inline">Valor<input type="number" min="0" data-path="atributos.${attribute}.valor"></label><label class="attribute-inline" title="Valor base editable">NO<input type="number" min="0" data-path="atributos.${attribute}.tn" aria-label="Número objetivo"></label></div>${Object.keys(skills).map(skill => `<div class="skill-row"><span>${displayName(skill)}</span><input type="number" min="0" data-path="habilidades.${attribute}.${skill}.rango" aria-label="Rango de ${displayName(skill)}"><label title="Habilidad favorecida"><input type="checkbox" data-path="habilidades.${attribute}.${skill}.favorecida"> Fav.</label></div>`).join('')}</section>`).join('');
     combatSkills.innerHTML = Object.keys(adventurer.combate.competencias).map(skill => `<label>${displayName(skill)}<input type="number" min="0" data-path="combate.competencias.${skill}"></label>`).join('');
     if (!adventurer.combate.equipoGuerra.length) adventurer.combate.equipoGuerra.push(newWarGearItem());
     warGearList.innerHTML = adventurer.combate.equipoGuerra.map((_, index) => `<div class="war-gear-entry"><div class="d-flex justify-content-between align-items-center mb-2"><span class="war-gear-title">Equipo ${index + 1}</span><button class="btn btn-link text-danger p-0 remove-war-gear-btn" type="button" data-gear-index="${index}" title="Eliminar equipo"><i class="fa-solid fa-trash-can"></i></button></div><div class="equipment-grid"><label>Nombre<input data-path="combate.equipoGuerra.${index}.item.nombre"></label><label>Tipo<input data-path="combate.equipoGuerra.${index}.item.tipoItem"></label><label>Subtipo<input data-path="combate.equipoGuerra.${index}.item.subtipoItem"></label><label>Competencia<input data-path="combate.equipoGuerra.${index}.item.competencia"></label><label>Daño<input type="number" min="0" data-path="combate.equipoGuerra.${index}.item.dano"></label><label>Herida<input type="number" min="0" data-path="combate.equipoGuerra.${index}.item.herida"></label><label>Carga<input type="number" min="0" data-path="combate.equipoGuerra.${index}.item.carga"></label><label class="wide">Notas<input data-path="combate.equipoGuerra.${index}.item.notas"></label></div></div>`).join('');
@@ -141,10 +186,20 @@ function normalizeAdventurerSheet(sheet, trancos = false) {
     if (Array.isArray(normalized.inventario.equipoViaje)) normalized.inventario.equipoViaje = normalized.inventario.equipoViaje.join('\n');
     return normalized;
 }
+function shadowPathForOccupation() {
+    const paths = { 'Buscador de tesoros': 'Mal del dragón', 'Campeón': 'Maldición de la venganza', 'Capitán': 'Atracción del poder', 'Erudito': 'Atracción de los secretos', 'Guardián': 'Camino de la desesperación', 'Mensajero': 'Locura del trotamundos' };
+    return paths[adventurer.informacionGeneral.ocupacion] || '';
+}
 function updateCalculatedFields() {
     const attributeTarget = adventurer.trancos ? 18 : 20;
-    Object.values(adventurer.atributos || {}).forEach(attribute => { attribute.tn = attributeTarget - Number(attribute.valor || 0); });
-    adventurer.estadisticas.cargaTotal = (adventurer.combate?.equipoGuerra || []).reduce((total, gear) => total + Number(gear.item?.carga || 0), 0);
+    Object.entries(adventurer.atributos || {}).forEach(([attributeName, attribute]) => {
+        const path = `atributos.${attributeName}.tn`;
+        if (!calculatedOverrides.has(path)) attribute.tn = attributeTarget - Number(attribute.valor || 0);
+    });
+    if (!calculatedOverrides.has('estadisticas.cargaTotal')) {
+        adventurer.estadisticas.cargaTotal = (adventurer.combate?.equipoGuerra || []).reduce((total, gear) => total + Number(gear.item?.carga || 0), 0);
+    }
+    if (!calculatedOverrides.has('sombra.senda')) adventurer.sombra.senda = shadowPathForOccupation();
 }
 function syncCalculatedInputs() {
     ['atributos.fuerza.tn', 'atributos.corazon.tn', 'atributos.mente.tn', 'estadisticas.cargaTotal'].forEach(path => {
@@ -152,58 +207,128 @@ function syncCalculatedInputs() {
         if (input) input.value = getAt(adventurer, path) ?? '';
     });
 }
-function setGuidedValue(path, value) { setAt(adventurer, path, value); updateCalculatedFields(); fillAdventurerForm(); }
-function askGuidedValue(label, path, options = {}) {
-    if (options.type === 'checkbox') return setGuidedValue(path, window.confirm(label));
-    const suffix = options.choices ? `\n\nOpciones:\n${options.choices.map((choice, index) => `${index + 1}. ${choice}`).join('\n')}` : '';
-    const answer = window.prompt(`${label}${suffix}`, options.defaultValue ?? '');
-    if (answer === null) return false;
-    if (options.type === 'number') {
-        const value = Number(answer);
-        setGuidedValue(path, Number.isFinite(value) ? value : 0);
-    } else if (options.choices) {
-        const index = Number(answer) - 1;
-        setGuidedValue(path, options.choices[index] || answer.trim());
-    } else if (options.list) {
-        setGuidedValue(path, answer.split(',').map(item => item.trim()).filter(Boolean));
-    } else setGuidedValue(path, answer);
-    return true;
-}
 function setShadowPathFromOccupation() {
-    const paths = { 'Buscador de tesoros': 'Mal del dragón', 'Campeón': 'Maldición de la venganza', 'Capitán': 'Atracción del poder', 'Erudito': 'Atracción de los secretos', 'Guardián': 'Camino de la desesperación', 'Mensajero': 'Locura del trotamundos' };
-    adventurer.sombra.senda = paths[adventurer.informacionGeneral.ocupacion] || '';
+    if (!calculatedOverrides.has('sombra.senda')) adventurer.sombra.senda = shadowPathForOccupation();
 }
-function guideNewAdventurer() {
-    adventurer.trancos = window.confirm('¿Quieres crear la hoja siguiendo el modo Trancos?\nAceptar = Trancos · Cancelar = tradicional');
-    const cultureChoices = ['Elfos de Lindon', 'Enanos del pueblo de Durin', 'Hobbits de la comarca', 'Hombres de Bardo', 'Hombres de Bree', 'Montaraces del norte', 'Elfos de Lórien', 'Altos elfos de Rivendel', 'Enanos de Nogrod y Belegost'];
-    const occupationChoices = ['Buscador de tesoros', 'Campeón', 'Capitán', 'Erudito', 'Guardián', 'Mensajero'];
-    askGuidedValue('Nombre del aventurero', 'informacionGeneral.nombre');
-    askGuidedValue('Cultura heroica', 'informacionGeneral.culturaHeroica', { choices: cultureChoices });
-    askGuidedValue('Ocupación', 'informacionGeneral.ocupacion', { choices: occupationChoices });
-    setShadowPathFromOccupation();
-    askGuidedValue('Nivel de vida', 'informacionGeneral.nivelDeVida');
-    askGuidedValue('Edad', 'informacionGeneral.edad', { type: 'number' });
-    askGuidedValue('Bendición cultural', 'informacionGeneral.bendicionCultural');
-    askGuidedValue('Heredero', 'informacionGeneral.heredero');
-    askGuidedValue('Defectos (separados por comas)', 'sombra.defectos', { list: true });
-    askGuidedValue('Rasgos distintivos (separados por comas)', 'rasgosDistintivos', { list: true });
-    ['fuerza', 'corazon', 'mente'].forEach(attribute => askGuidedValue(`Valor de ${displayName(attribute)}`, `atributos.${attribute}.valor`, { type: 'number' }));
-    Object.entries(adventurer.habilidades).forEach(([attribute, skills]) => Object.keys(skills).forEach(skill => {
-        askGuidedValue(`Rango de ${displayName(skill)} (${displayName(attribute)})`, `habilidades.${attribute}.${skill}.rango`, { type: 'number' });
-        askGuidedValue(`¿${displayName(skill)} favorecida?`, `habilidades.${attribute}.${skill}.favorecida`, { type: 'checkbox' });
-    }));
-    const manualPaths = ['desarrollo.valor', 'desarrollo.sabiduria', 'desarrollo.puntosAventura', 'desarrollo.puntosHabilidad', 'estados.cansado', 'estados.desanimado', 'estados.herido', 'estados.diasDeHerida', 'sombra.puntos', 'sombra.cicatrices', 'estadisticas.aguante.maximo', 'estadisticas.aguante.actual', 'estadisticas.esperanza.maxima', 'estadisticas.esperanza.actual', 'estadisticas.parada', 'estadisticas.fatiga', 'estados.lesiones', 'compania.vinculoComunidad', 'compania.puntuacionComunidad', 'compania.refugio'];
-    manualPaths.forEach(path => { const current = getAt(adventurer, path); askGuidedValue(`Introduce ${path.split('.').pop()}`, path, { type: typeof current === 'number' ? 'number' : (typeof current === 'boolean' ? 'checkbox' : undefined) }); });
-    Object.keys(adventurer.combate.competencias).forEach(skill => askGuidedValue(`Competencia de ${displayName(skill)}`, `combate.competencias.${skill}`, { type: 'number' }));
-    ['desarrollo.recompensas', 'desarrollo.virtudes', 'inventario.equipoViaje'].forEach(path => askGuidedValue(`Introduce ${path.split('.').pop()}`, path));
-    adventurer.combate.equipoGuerra.forEach((gear, index) => ['nombre', 'tipoItem', 'subtipoItem', 'competencia', 'dano', 'herida', 'carga', 'notas'].forEach(field => {
-        const path = `combate.equipoGuerra.${index}.item.${field}`;
-        askGuidedValue(`Equipo de guerra ${index + 1}: ${field}`, path, { type: typeof gear.item[field] === 'number' ? 'number' : undefined });
-    }));
-    ['inventario.riqueza'].forEach(path => askGuidedValue(`Introduce ${path.split('.').pop()}`, path, { type: 'number' }));
+
+// Guided creation: only identity data, the three attributes and the creation mode.
+const guidedModalElement = document.getElementById('guidedAdventurerModal');
+const guidedModal = guidedModalElement ? bootstrap.Modal.getOrCreateInstance(guidedModalElement) : null;
+const guidedForm = document.getElementById('guided-adventurer-form');
+const guidedStepContent = document.getElementById('guided-step-content');
+const guidedTitle = document.getElementById('guided-title');
+const guidedSubtitle = document.getElementById('guided-subtitle');
+const guidedProgressBar = document.getElementById('guided-progress-bar');
+const guidedProgressLabel = document.getElementById('guided-progress-label');
+const guidedBackBtn = document.getElementById('guided-back-btn');
+const guidedNextBtn = document.getElementById('guided-next-btn');
+const guidedExitBtn = document.getElementById('guided-exit-btn');
+const guidedCloseBtn = document.getElementById('guided-close-btn');
+let guidedStep = 0;
+const guidedStepCount = 4;
+const guidedCultures = ['Elfos de Lindon', 'Enanos del pueblo de Durin', 'Hobbits de la comarca', 'Hombres de Bardo', 'Hombres de Bree', 'Montaraces del norte', 'Elfos de Lórien', 'Altos elfos de Rivendel', 'Enanos de Nogrod y Belegost'];
+const guidedOccupations = ['Buscador de tesoros', 'Campeón', 'Capitán', 'Erudito', 'Guardián', 'Mensajero'];
+const guidedSelectOptions = options => options.map(option => `<option value="${option}">${option}</option>`).join('');
+
+function guidedField(path, label, type = 'text', extra = '') {
+    return `<label class="guided-field">${label}<input class="form-control tor-input" type="${type}" data-guided-path="${path}" ${extra}></label>`;
+}
+
+function renderGuidedStep() {
+    const steps = [
+        {
+            title: 'Elige una base de creación',
+            subtitle: 'Puedes cambiar estos valores más adelante desde la ficha.',
+            content: `<div class="guided-intro"><i class="fa-solid fa-feather-pointed"></i><p>La guía prepara únicamente los datos esenciales. El resto de la hoja queda disponible para introducirlo directamente y los valores calculados se ofrecen como base editable.</p></div><div class="guided-mode-grid"><label class="guided-mode-card"><input type="radio" name="guided-trancos" value="false" data-guided-mode><span><strong>Modo tradicional</strong><small>Valores objetivo con base 20.</small></span></label><label class="guided-mode-card"><input type="radio" name="guided-trancos" value="true" data-guided-mode><span><strong>Modo Trancos</strong><small>Valores objetivo con base 18.</small></span></label></div>`
+        },
+        {
+            title: 'Datos del aventurero',
+            subtitle: 'Completa los valores de la primera sección de la ficha.',
+            content: `<div class="guided-fields-grid">${guidedField('informacionGeneral.nombre', 'Nombre', 'text', 'aria-required="true" placeholder="Nombre del aventurero"')}<label class="guided-field">Cultura heroica<select class="form-select tor-select" data-guided-path="informacionGeneral.culturaHeroica" aria-required="true"><option value="">Selecciona una cultura…</option>${guidedSelectOptions(guidedCultures)}</select></label><label class="guided-field">Ocupación<select class="form-select tor-select" data-guided-path="informacionGeneral.ocupacion" aria-required="true"><option value="">Selecciona una ocupación…</option>${guidedSelectOptions(guidedOccupations)}</select></label>${guidedField('informacionGeneral.nivelDeVida', 'Nivel de vida')}${guidedField('informacionGeneral.edad', 'Edad', 'number', 'min="0"')}${guidedField('informacionGeneral.bendicionCultural', 'Bendición cultural')}${guidedField('informacionGeneral.heredero', 'Heredero')}${guidedField('sombra.defectos', 'Defectos', 'text', 'placeholder="Separados por comas"')}${guidedField('rasgosDistintivos', 'Rasgos distintivos', 'text', 'placeholder="Separados por comas"')}</div><div class="guided-calculated-note"><i class="fa-solid fa-wand-magic-sparkles me-1"></i> El camino de la sombra se sugerirá automáticamente según la ocupación y seguirá siendo editable en la ficha.</div>`
+        },
+        {
+            title: 'Atributos principales',
+            subtitle: 'Introduce Fuerza, Corazón y Mente. Sus NO son una sugerencia editable.',
+            content: `<div class="guided-attribute-grid"><div class="guided-attribute-card"><i class="fa-solid fa-hand-fist"></i>${guidedField('atributos.fuerza.valor', 'Fuerza', 'number', 'min="0" aria-required="true"')}</div><div class="guided-attribute-card"><i class="fa-solid fa-heart"></i>${guidedField('atributos.corazon.valor', 'Corazón', 'number', 'min="0" aria-required="true"')}</div><div class="guided-attribute-card"><i class="fa-solid fa-brain"></i>${guidedField('atributos.mente.valor', 'Mente', 'number', 'min="0" aria-required="true"')}</div></div>`
+        },
+        {
+            title: '¡Ficha lista para continuar!',
+            subtitle: 'La base se ha aplicado sin bloquear ningún valor.',
+            content: `<div class="guided-summary"><div class="guided-summary-icon"><i class="fa-solid fa-scroll"></i></div><p>Ya puedes completar el resto de la ficha directamente: habilidades, competencias, estados, equipo y compañía.</p><div class="guided-summary-grid"><span>NO de atributos</span><strong>Base editable</strong><span>Aguante, esperanza y parada</span><strong>Base editable</strong><span>Carga y camino de la sombra</span><strong>Sugerencia editable</strong></div></div>`
+        }
+    ];
+    const current = steps[guidedStep];
+    guidedTitle.textContent = current.title;
+    guidedSubtitle.textContent = current.subtitle;
+    guidedStepContent.innerHTML = `${current.content}<div class="guided-error d-none" id="guided-error"></div>`;
+    guidedProgressBar.style.width = `${((guidedStep + 1) / guidedStepCount) * 100}%`;
+    guidedProgressLabel.textContent = `Paso ${guidedStep + 1} de ${guidedStepCount}`;
+    guidedModalElement.querySelector('.progress').setAttribute('aria-valuenow', guidedStep + 1);
+    guidedBackBtn.classList.toggle('d-none', guidedStep === 0);
+    guidedNextBtn.innerHTML = guidedStep === guidedStepCount - 1 ? 'Terminar <i class="fa-solid fa-check ms-1"></i>' : 'Siguiente <i class="fa-solid fa-arrow-right ms-1"></i>';
+
+    guidedStepContent.querySelectorAll('[data-guided-path]').forEach(input => {
+        const value = getAt(adventurer, input.dataset.guidedPath);
+        if (input.tagName === 'SELECT') input.value = value ?? '';
+        else input.value = input.dataset.guidedPath.includes('defectos') || input.dataset.guidedPath === 'rasgosDistintivos' ? (Array.isArray(value) ? value.join(', ') : value ?? '') : (value ?? '');
+    });
+    const modeInput = guidedStepContent.querySelector(`[data-guided-mode][value="${adventurer.trancos ? 'true' : 'false'}"]`);
+    if (modeInput) modeInput.checked = true;
+}
+
+function updateGuidedValue(input) {
+    if (input.matches('[data-guided-mode]')) {
+        adventurer.trancos = input.value === 'true';
+        updateCalculatedFields();
+        return;
+    }
+    const path = input.dataset.guidedPath;
+    let value = input.value;
+    if (input.type === 'number') value = Number(value || 0);
+    if (path === 'sombra.defectos' || path === 'rasgosDistintivos') value = value.split(',').map(item => item.trim()).filter(Boolean);
+    setAt(adventurer, path, value);
+    if (path === 'informacionGeneral.ocupacion') setShadowPathFromOccupation();
+    updateCalculatedFields();
+}
+
+function validateGuidedStep() {
+    if (guidedStep === 0 || guidedStep === 3) return true;
+    const invalid = [...guidedStepContent.querySelectorAll('[aria-required="true"]')].find(input => !String(input.value).trim());
+    if (!invalid) return true;
+    invalid.focus();
+    const error = document.getElementById('guided-error');
+    error.textContent = 'Completa los campos obligatorios para continuar.';
+    error.classList.remove('d-none');
+    return false;
+}
+
+function closeGuidedAdventurerGuide() {
     updateCalculatedFields();
     fillAdventurerForm();
+    saveAdventurer();
+    if (guidedModal) guidedModal.hide();
 }
+
+function guideNewAdventurer() {
+    guidedStep = 0;
+    renderGuidedStep();
+    if (guidedModal) guidedModal.show();
+}
+
+guidedForm.addEventListener('input', event => updateGuidedValue(event.target));
+guidedForm.addEventListener('change', event => updateGuidedValue(event.target));
+guidedForm.addEventListener('submit', event => {
+    event.preventDefault();
+    if (!validateGuidedStep()) return;
+    if (guidedStep < guidedStepCount - 1) {
+        guidedStep += 1;
+        renderGuidedStep();
+    } else closeGuidedAdventurerGuide();
+});
+guidedBackBtn.addEventListener('click', () => { if (guidedStep > 0) { guidedStep -= 1; renderGuidedStep(); } });
+guidedExitBtn.addEventListener('click', closeGuidedAdventurerGuide);
+guidedCloseBtn.addEventListener('click', closeGuidedAdventurerGuide);
+
 function renderAdventurerSelects() {
     const options = savedAdventurers.map(item => `<option value="${item._id}">${item.nombre}</option>`).join('');
     if (sheetLibrarySelect) sheetLibrarySelect.innerHTML = `<option value="">Hojas guardadas…</option>${options}`;
@@ -221,7 +346,7 @@ async function fetchAdventurers() {
     catch (_) { const status = document.getElementById('adventurer-save-status'); if (status) status.textContent = 'No se pudo conectar con la base de datos.'; }
 }
 async function saveAdventurerToDatabase() {
-    if (isLocalFile) { alert('Abre la aplicación desde el servidor para guardar fichas en la base de datos.'); return; }
+    if (isLocalFile) { appAlert('Abre la aplicación desde el servidor para guardar fichas en la base de datos.'); return; }
     if (!adventurer.informacionGeneral.nombre.trim()) {
         const nameInput = adventurerForm.querySelector('[data-path="informacionGeneral.nombre"]');
         nameInput.focus();
@@ -242,7 +367,7 @@ async function saveAdventurerToDatabase() {
     } catch (error) { if (status) status.textContent = error.message; }
 }
 
-adventurerForm.addEventListener('input', event => { const input = event.target; if (!input.dataset.path) return; let value = input.type === 'checkbox' ? input.checked : input.value; if (input.type === 'number') value = Number(value || 0); if (input.dataset.list) value = value.split(',').map(item => item.trim()).filter(Boolean); setAt(adventurer, input.dataset.path, value); if (input.dataset.path === 'informacionGeneral.ocupacion') { setShadowPathFromOccupation(); const shadowPathInput = adventurerForm.querySelector('[data-path="sombra.senda"]'); if (shadowPathInput) shadowPathInput.value = adventurer.sombra.senda; } updateCalculatedFields(); syncCalculatedInputs(); saveAdventurer(); });
+adventurerForm.addEventListener('input', event => { const input = event.target; if (!input.dataset.path) return; let value = input.type === 'checkbox' ? input.checked : input.value; if (input.type === 'number') value = Number(value || 0); if (input.dataset.list) value = value.split(',').map(item => item.trim()).filter(Boolean); if (calculatedEditablePaths.has(input.dataset.path)) calculatedOverrides.add(input.dataset.path); setAt(adventurer, input.dataset.path, value); if (input.dataset.path === 'informacionGeneral.ocupacion') { setShadowPathFromOccupation(); const shadowPathInput = adventurerForm.querySelector('[data-path="sombra.senda"]'); if (shadowPathInput) shadowPathInput.value = adventurer.sombra.senda; } updateCalculatedFields(); syncCalculatedInputs(); saveAdventurer(); });
 adventurerForm.addEventListener('change', event => { if (event.target.dataset.path !== 'informacionGeneral.ocupacion') return; setShadowPathFromOccupation(); const shadowPathInput = adventurerForm.querySelector('[data-path="sombra.senda"]'); if (shadowPathInput) shadowPathInput.value = adventurer.sombra.senda; saveAdventurer(); });
 addWarGearBtn.addEventListener('click', () => { adventurer.combate.equipoGuerra.push(newWarGearItem()); fillAdventurerForm(); saveAdventurer(); });
 warGearList.addEventListener('click', event => { const button = event.target.closest('.remove-war-gear-btn'); if (!button) return; adventurer.combate.equipoGuerra.splice(Number(button.dataset.gearIndex), 1); fillAdventurerForm(); saveAdventurer(); });
@@ -251,6 +376,7 @@ openAdventurerButtons.forEach(button => button.addEventListener('click', async (
     const assignedSheet = currentRoom && assignedAdventurerId ? savedAdventurers.find(item => item._id === assignedAdventurerId) : null;
     const creatingNewSheet = !assignedSheet;
     adventurer = assignedSheet ? normalizeAdventurerSheet(assignedSheet.ficha, assignedSheet.trancos) : newAdventurer();
+    calculatedOverrides = assignedSheet ? new Set(calculatedEditablePaths) : new Set();
     adventurerId = assignedSheet?._id || null;
     setShadowPathFromOccupation();
     fillAdventurerForm();
@@ -259,8 +385,8 @@ openAdventurerButtons.forEach(button => button.addEventListener('click', async (
 }));
 closeAdventurerBtn.addEventListener('click', () => { adventurerScreen.classList.add('d-none'); (currentRoom ? appScreen : roomSelectionScreen).classList.remove('d-none'); });
 exportAdventurerBtn.addEventListener('click', () => { const blob = new Blob([JSON.stringify(adventurer, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${adventurer.informacionGeneral.nombre || 'aventurero'}.json`; link.click(); URL.revokeObjectURL(link.href); });
-resetAdventurerBtn.addEventListener('click', () => { if (confirm('¿Reiniciar todos los campos de la ficha?')) { adventurer = newAdventurer(); saveAdventurer(); fillAdventurerForm(); } });
-adventurerImport.addEventListener('change', event => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { adventurer = JSON.parse(reader.result); adventurerId = null; saveAdventurer(); fillAdventurerForm(); } catch (_) { alert('El archivo no contiene un JSON de aventurero válido.'); } }; reader.readAsText(file); event.target.value = ''; });
+resetAdventurerBtn.addEventListener('click', async () => { if (await appConfirm('¿Reiniciar todos los campos de la ficha?', 'Reiniciar ficha')) { adventurer = newAdventurer(); calculatedOverrides = new Set(); saveAdventurer(); fillAdventurerForm(); } });
+adventurerImport.addEventListener('change', event => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { adventurer = normalizeAdventurerSheet(JSON.parse(reader.result)); calculatedOverrides = new Set(calculatedEditablePaths); adventurerId = null; saveAdventurer(); fillAdventurerForm(); } catch (_) { appAlert('El archivo no contiene un JSON de aventurero válido.', 'Importación no válida'); } }; reader.readAsText(file); event.target.value = ''; });
 saveAdventurerBtn.addEventListener('click', saveAdventurerToDatabase);
 sheetLibrarySelect.addEventListener('change', event => { const record = savedAdventurers.find(item => item._id === event.target.value); if (!record) return; adventurer = normalizeAdventurerSheet(record.ficha, record.trancos); adventurerId = record._id; setShadowPathFromOccupation(); saveAdventurer(); fillAdventurerForm(); });
 adventurerSelect.addEventListener('change', event => { assignedAdventurerId = event.target.value; localStorage.setItem('tor_assigned_adventurer', assignedAdventurerId); const record = savedAdventurers.find(item => item._id === assignedAdventurerId); if (!isLocalFile && currentRoom) socket.emit('update-user', { username: currentUser, stance: currentStance, adventurerId: assignedAdventurerId, adventurerName: record?.nombre || '' }); else renderLocalActiveUsers(); });
@@ -437,7 +563,7 @@ battleZones.forEach(zone => {
 function handleUpdateUsername() {
     const newName = changeUsernameInput.value.trim();
     if (!newName) {
-        alert("Por favor, introduce un nombre válido.");
+        appAlert("Por favor, introduce un nombre válido.");
         return;
     }
     if (newName === currentUser) {
@@ -513,7 +639,7 @@ joinBtn.addEventListener('click', () => {
     const room = roomnameInput.value.trim();
 
     if (!user || !room) {
-        alert("Por favor, escribe el nombre de la sala a la que deseas entrar.");
+        appAlert("Por favor, escribe el nombre de la sala a la que deseas entrar.");
         return;
     }
 
@@ -590,7 +716,7 @@ rollBtn.addEventListener('click', () => {
 
 // Clear History
 clearHistoryBtn.addEventListener('click', () => {
-    if (confirm("¿Seguro que quieres borrar todo el historial de esta sala?")) {
+    appConfirm("¿Seguro que quieres borrar todo el historial de esta sala?", 'Borrar historial').then(confirmed => { if (confirmed) {
         if (isLocalFile) {
             localStorage.setItem(`rpg_history_${currentRoom}`, JSON.stringify([]));
             historyList.innerHTML = "";
@@ -598,12 +724,12 @@ clearHistoryBtn.addEventListener('click', () => {
         } else {
             socket.emit('clear-history', currentRoom);
         }
-    }
+    } });
 });
 
 // Leave Room
 leaveBtn.addEventListener('click', () => {
-    if (confirm("¿Seguro que quieres salir de la sala?")) {
+    appConfirm("¿Seguro que quieres salir de la sala?", 'Salir de la sala').then(confirmed => { if (confirmed) {
         if (!isLocalFile) {
             window.location.reload();
         } else {
@@ -612,7 +738,7 @@ leaveBtn.addEventListener('click', () => {
             currentUser = "";
             currentRoom = "";
         }
-    }
+    } });
 });
 
 // Helper for local file active users
@@ -737,8 +863,7 @@ socket.on('update-room-users', (users) => {
 });
 
 socket.on('room-deleted', () => {
-    alert("Esta sala ha sido eliminada por un administrador.");
-    window.location.reload();
+     appAlert("Esta sala ha sido eliminada por un administrador.").then(() => window.location.reload());
 });
 
     socket.on('update-rooms', (rooms) => {
@@ -766,7 +891,7 @@ socket.on('room-deleted', () => {
         deleteBtn.innerHTML = `<i class="fa-solid fa-trash-can"></i>`;
         deleteBtn.onclick = (e) => {
             e.stopPropagation();
-            if (confirm(`¿Eliminar la sala "${room}" y todo su historial?`)) {
+            appConfirm(`¿Eliminar la sala "${room}" y todo su historial?`, 'Eliminar sala').then(confirmed => { if (confirmed) {
                 if (isLocalFile) {
                     localStorage.removeItem(`rpg_history_${room}`);
                     item.remove();
@@ -774,7 +899,7 @@ socket.on('room-deleted', () => {
                 } else {
                     socket.emit('delete-room', room);
                 }
-            }
+            } });
         };
 
         item.appendChild(nameSpan);

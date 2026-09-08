@@ -196,6 +196,71 @@
         </div>
     </div>
 
+    <!-- Guided adventurer creation -->
+    <div class="modal fade guided-adventurer-modal" id="guidedAdventurerModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content tor-book-panel border-0 shadow-lg">
+                <div class="tor-corner-tl"></div><div class="tor-corner-tr"></div><div class="tor-corner-bl"></div><div class="tor-corner-br"></div>
+                <div class="modal-header border-bottom-0 align-items-start">
+                    <div>
+                        <div class="tor-mini-header mb-1">CREACIÓN DE AVENTURERO</div>
+                        <h5 class="modal-title logo-text fs-3" id="guided-title">Preparar la ficha</h5>
+                        <p class="guided-subtitle mb-0" id="guided-subtitle"></p>
+                    </div>
+                    <button type="button" class="btn-close" id="guided-close-btn" aria-label="Salir de la guía"></button>
+                </div>
+                <div class="guided-progress px-4">
+                    <div class="progress" role="progressbar" aria-label="Progreso de la guía" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1">
+                        <div class="progress-bar" id="guided-progress-bar"></div>
+                    </div>
+                    <span class="guided-progress-label" id="guided-progress-label">Paso 1 de 4</span>
+                </div>
+                <form id="guided-adventurer-form">
+                    <div class="modal-body pt-4" id="guided-step-content"></div>
+                    <div class="modal-footer border-top-0 justify-content-between">
+                        <button type="button" class="btn btn-outline-secondary" id="guided-exit-btn"><i class="fa-solid fa-arrow-right-from-bracket me-1"></i> Salir de la guía</button>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-danger d-none" id="guided-back-btn"><i class="fa-solid fa-arrow-left me-1"></i> Atrás</button>
+                            <button type="submit" class="btn btn-tor-primary" id="guided-next-btn">Siguiente <i class="fa-solid fa-arrow-right ms-1"></i></button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shared visual feedback modals -->
+    <div class="modal fade app-feedback-modal" id="appFeedbackModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content tor-book-panel border-0 shadow-lg">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title logo-text fs-5" id="app-feedback-title">Aviso</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body pt-2" id="app-feedback-message"></div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-tor-primary" data-bs-dismiss="modal">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade app-feedback-modal" id="appConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content tor-book-panel border-0 shadow-lg">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title logo-text fs-5" id="app-confirm-title">Confirmar</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body pt-2" id="app-confirm-message"></div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary" id="app-confirm-cancel">Cancelar</button>
+                    <button type="button" class="btn btn-tor-primary" id="app-confirm-ok">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Room Selection Screen (Formerly Login) -->
     <div id="room-selection-screen" class="container d-none align-items-center justify-content-center min-vh-100 py-4">
         <div class="card border-0 shadow-lg p-4 p-md-5 login-card animate-fade-in tor-book-panel position-relative">
@@ -590,7 +655,7 @@
                         <label>Edad<input type="number" min="0" data-path="informacionGeneral.edad"></label>
                         <label>Bendición cultural<input data-path="informacionGeneral.bendicionCultural"></label>
                         <label>Heredero<input data-path="informacionGeneral.heredero"></label>
-                        <label>Camino de la sombra<input data-path="sombra.senda" readonly></label>
+                        <label>Camino de la sombra<input data-path="sombra.senda" title="Valor sugerido: puedes editarlo"></label>
                         <label>Defectos<input data-path="sombra.defectos" data-list="true" placeholder="Separados por comas"></label>
                         <label class="wide">Rasgos distintivos<input data-path="rasgosDistintivos" data-list="true" placeholder="Separados por comas"></label>
                     </div>
@@ -607,7 +672,7 @@
                     <section class="sheet-panel compact-panel">
                         <h2>Estados y sombra</h2>
                         <div class="state-list"><label><input type="checkbox" data-path="estados.cansado"> Cansado</label><label><input type="checkbox" data-path="estados.desanimado"> Desanimado</label><label><input type="checkbox" data-path="estados.herido"> Herido</label></div>
-                        <div class="stat-grid"><label>Días de herida<input type="number" min="0" data-path="estados.diasDeHerida"></label><label>Puntos de sombra<input type="number" min="0" data-path="sombra.puntos"></label><label>Cicatrices de la sombra<input type="number" min="0" data-path="sombra.cicatrices"></label><label>Aguante máximo<input type="number" min="0" data-path="estadisticas.aguante.maximo"></label><label>Aguante actual<input type="number" min="0" data-path="estadisticas.aguante.actual"></label><label>Esperanza máxima<input type="number" min="0" data-path="estadisticas.esperanza.maxima"></label><label>Esperanza actual<input type="number" min="0" data-path="estadisticas.esperanza.actual"></label><label>Parada<input type="number" min="0" data-path="estadisticas.parada"></label><label>Fatiga<input type="number" min="0" data-path="estadisticas.fatiga"></label><label class="wide">Lesiones<textarea data-path="estados.lesiones" rows="3"></textarea></label></div>
+                        <div class="stat-grid"><label>Días de herida<input type="number" min="0" data-path="estados.diasDeHerida"></label><label>Puntos de sombra<input type="number" min="0" data-path="sombra.puntos"></label><label>Cicatrices de la sombra<input type="number" min="0" data-path="sombra.cicatrices"></label><label title="Valor base editable">Aguante máximo<input type="number" min="0" data-path="estadisticas.aguante.maximo"></label><label>Aguante actual<input type="number" min="0" data-path="estadisticas.aguante.actual"></label><label title="Valor base editable">Esperanza máxima<input type="number" min="0" data-path="estadisticas.esperanza.maxima"></label><label>Esperanza actual<input type="number" min="0" data-path="estadisticas.esperanza.actual"></label><label title="Valor base editable">Parada<input type="number" min="0" data-path="estadisticas.parada"></label><label>Fatiga<input type="number" min="0" data-path="estadisticas.fatiga"></label><label class="wide">Lesiones<textarea data-path="estados.lesiones" rows="3"></textarea></label></div>
                     </section>
                     <section class="sheet-panel compact-panel">
                         <h2>Compañía</h2>
@@ -627,7 +692,7 @@
                     <button id="add-war-gear-btn" type="button" class="btn btn-outline-danger btn-sm mt-3"><i class="fa-solid fa-plus me-1"></i> Añadir equipo</button>
                 </section>
                 <section class="sheet-panel sheet-travel">
-                    <h2>Viaje e inventario</h2><div class="stat-grid"><label>Riqueza<input type="number" min="0" data-path="inventario.riqueza"></label><label class="wide">Carga total<input type="number" min="0" data-path="estadisticas.cargaTotal" readonly></label></div>
+                    <h2>Viaje e inventario</h2><div class="stat-grid"><label>Riqueza<input type="number" min="0" data-path="inventario.riqueza"></label><label class="wide" title="Valor base editable">Carga total<input type="number" min="0" data-path="estadisticas.cargaTotal"></label></div>
                 </section>
             </form>
             <footer class="sheet-footer"><span id="adventurer-save-status">Los cambios se guardan automáticamente en este dispositivo.</span><button id="reset-adventurer-btn" class="btn btn-link btn-sm text-danger">Reiniciar ficha</button></footer>

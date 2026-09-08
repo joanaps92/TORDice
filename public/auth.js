@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             
             if (!res.ok) {
-                alert(data.error);
+                appAlert(data.error);
                 return;
             }
 
@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 checkAuth();
             }
         } catch (err) {
-            alert("Error de conexión");
+                appAlert("Error de conexión");
         }
     });
 
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             
             if (!res.ok) {
-                alert(data.error);
+                appAlert(data.error);
                 return;
             }
 
@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             checkAuth();
         } catch (err) {
-            alert("Error de conexión");
+                appAlert("Error de conexión");
         }
     });
 
@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             
             if (!res.ok) {
-                alert(data.error);
+                appAlert(data.error);
                 btn.disabled = false;
                 btn.textContent = 'ENVIAR CÓDIGO';
                 return;
@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('forgot-step-1').classList.add('d-none');
             document.getElementById('forgot-step-2').classList.remove('d-none');
         } catch (err) {
-            alert("Error de conexión");
+                appAlert("Error de conexión");
             btn.disabled = false;
             btn.textContent = 'ENVIAR CÓDIGO';
         }
@@ -175,16 +175,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             
             if (!res.ok) {
-                alert(data.error);
+                appAlert(data.error);
                 return;
             }
 
-            alert("Contraseña restablecida con éxito. Ya puedes iniciar sesión.");
+                appAlert("Contraseña restablecida con éxito. Ya puedes iniciar sesión.", "Contraseña actualizada");
             document.getElementById('forgot-step-1').classList.remove('d-none');
             document.getElementById('forgot-step-2').classList.add('d-none');
             showScreen(authScreen);
         } catch (err) {
-            alert("Error de conexión");
+                appAlert("Error de conexión");
         }
     });
 
@@ -239,12 +239,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         if (res.ok) {
-            alert("Usuario creado");
+            appAlert("Usuario creado", "Usuario creado");
             createUserForm.reset();
             loadUsers();
         } else {
             const data = await res.json();
-            alert(data.error);
+            appAlert(data.error);
         }
     });
 
@@ -267,13 +267,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         if (res.ok) {
-            alert("Usuario actualizado");
+            appAlert("Usuario actualizado", "Usuario actualizado");
             editUserForm.reset();
             bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
             loadUsers();
         } else {
             const data = await res.json();
-            alert(data.error);
+            appAlert(data.error);
         }
     });
 
