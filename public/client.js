@@ -107,9 +107,9 @@ const newAdventurer = () => ({
     informacionGeneral: { nombre: '', culturaHeroica: '', ocupacion: '', nivelDeVida: '', edad: 0, bendicionCultural: '', heredero: '' },
     atributos: { fuerza: { valor: 0, tn: 20 }, corazon: { valor: 0, tn: 20 }, mente: { valor: 0, tn: 20 } },
     estadisticas: { aguante: { maximo: 0, actual: 0 }, esperanza: { maxima: 0, actual: 0 }, parada: 0, cargaTotal: 0, fatiga: 0 },
-    estados: { cansado: false, desanimado: false, herido: false, diasDeHerida: 0 },
+    estados: { cansado: false, desanimado: false, herido: false, diasDeHerida: 0, lesiones: '' },
     sombra: { puntos: 0, cicatrices: 0, senda: '', defectos: [] },
-    desarrollo: { valor: 1, sabiduria: 1, puntosHabilidad: 0, puntosAventura: 0, virtudes: [], recompensas: [] },
+    desarrollo: { valor: 1, sabiduria: 1, puntosHabilidad: 0, puntosAventura: 0, virtudes: '', recompensas: '' },
     habilidades: { fuerza: { impresionar: { rango: 0, favorecida: false }, atletismo: { rango: 0, favorecida: false }, alerta: { rango: 0, favorecida: false }, cazar: { rango: 0, favorecida: false }, cantar: { rango: 0, favorecida: false }, oficio: { rango: 0, favorecida: false } }, corazon: { alentar: { rango: 0, favorecida: false }, viajar: { rango: 0, favorecida: false }, perspicacia: { rango: 0, favorecida: false }, curar: { rango: 0, favorecida: false }, cortesia: { rango: 0, favorecida: false }, guerrear: { rango: 0, favorecida: false } }, mente: { persuadir: { rango: 0, favorecida: false }, sigilo: { rango: 0, favorecida: false }, inspeccionar: { rango: 0, favorecida: false }, explorar: { rango: 0, favorecida: false }, acertijos: { rango: 0, favorecida: false }, saber: { rango: 0, favorecida: false } } },
     combate: { competencias: { hachas: 0, arcos: 0, lanzas: 0, espadas: 0 }, equipoGuerra: [{ item: { tipoItem: '', nombre: '', subtipoItem: '', dano: 0, herida: 0, carga: 0, competencia: '', notas: '' } }] },
     rasgosDistintivos: [], inventario: { objetosUtiles: [], equipoViaje: '', riqueza: 0 }, compania: { vinculoComunidad: '', puntuacionComunidad: 0, refugio: '' }
@@ -131,7 +131,15 @@ function renderSheetDynamicFields() {
 }
 function fillAdventurerForm() { renderSheetDynamicFields(); adventurerForm.querySelectorAll('[data-path]').forEach(input => { const value = getAt(adventurer, input.dataset.path); input.checked = input.type === 'checkbox' && Boolean(value); input.value = input.dataset.list ? (value || []).join(', ') : (input.type === 'checkbox' ? '' : (value ?? '')); }); }
 function saveAdventurer() { localStorage.setItem(ADVENTURER_KEY, JSON.stringify(adventurer)); const status = document.getElementById('adventurer-save-status'); if (status) status.textContent = 'Borrador guardado en este dispositivo. Pulsa Guardar para sincronizarlo.'; }
-function loadAdventurer() { try { const saved = JSON.parse(localStorage.getItem(ADVENTURER_KEY)); if (saved) adventurer = saved; } catch (_) { adventurer = newAdventurer(); } fillAdventurerForm(); }
+function normalizeAdventurerSheet(sheet) {
+    const base = newAdventurer();
+    const normalized = { ...base, ...sheet, estados: { ...base.estados, ...sheet.estados }, sombra: { ...base.sombra, ...sheet.sombra }, desarrollo: { ...base.desarrollo, ...sheet.desarrollo }, inventario: { ...base.inventario, ...sheet.inventario } };
+    ['virtudes', 'recompensas'].forEach(key => {
+        if (Array.isArray(normalized.desarrollo[key])) normalized.desarrollo[key] = normalized.desarrollo[key].join('\n');
+    });
+    if (Array.isArray(normalized.inventario.equipoViaje)) normalized.inventario.equipoViaje = normalized.inventario.equipoViaje.join('\n');
+    return normalized;
+}
 function renderAdventurerSelects() {
     const options = savedAdventurers.map(item => `<option value="${item._id}">${item.nombre}</option>`).join('');
     if (sheetLibrarySelect) sheetLibrarySelect.innerHTML = `<option value="">Hojas guardadas…</option>${options}`;
@@ -173,13 +181,20 @@ async function saveAdventurerToDatabase() {
 adventurerForm.addEventListener('input', event => { const input = event.target; if (!input.dataset.path) return; let value = input.type === 'checkbox' ? input.checked : input.value; if (input.type === 'number') value = Number(value || 0); if (input.dataset.list) value = value.split(',').map(item => item.trim()).filter(Boolean); setAt(adventurer, input.dataset.path, value); saveAdventurer(); });
 addWarGearBtn.addEventListener('click', () => { adventurer.combate.equipoGuerra.push(newWarGearItem()); fillAdventurerForm(); saveAdventurer(); });
 warGearList.addEventListener('click', event => { const button = event.target.closest('.remove-war-gear-btn'); if (!button) return; adventurer.combate.equipoGuerra.splice(Number(button.dataset.gearIndex), 1); fillAdventurerForm(); saveAdventurer(); });
-openAdventurerButtons.forEach(button => button.addEventListener('click', () => { loadAdventurer(); fetchAdventurers(); roomSelectionScreen.classList.add('d-none'); appScreen.classList.add('d-none'); adventurerScreen.classList.remove('d-none'); window.scrollTo(0, 0); }));
+openAdventurerButtons.forEach(button => button.addEventListener('click', async () => {
+    await fetchAdventurers();
+    const assignedSheet = currentRoom && assignedAdventurerId ? savedAdventurers.find(item => item._id === assignedAdventurerId) : null;
+    adventurer = assignedSheet ? normalizeAdventurerSheet(assignedSheet.ficha) : newAdventurer();
+    adventurerId = assignedSheet?._id || null;
+    fillAdventurerForm();
+    roomSelectionScreen.classList.add('d-none'); appScreen.classList.add('d-none'); adventurerScreen.classList.remove('d-none'); window.scrollTo(0, 0);
+}));
 closeAdventurerBtn.addEventListener('click', () => { adventurerScreen.classList.add('d-none'); (currentRoom ? appScreen : roomSelectionScreen).classList.remove('d-none'); });
 exportAdventurerBtn.addEventListener('click', () => { const blob = new Blob([JSON.stringify(adventurer, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${adventurer.informacionGeneral.nombre || 'aventurero'}.json`; link.click(); URL.revokeObjectURL(link.href); });
 resetAdventurerBtn.addEventListener('click', () => { if (confirm('¿Reiniciar todos los campos de la ficha?')) { adventurer = newAdventurer(); saveAdventurer(); fillAdventurerForm(); } });
 adventurerImport.addEventListener('change', event => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { adventurer = JSON.parse(reader.result); adventurerId = null; saveAdventurer(); fillAdventurerForm(); } catch (_) { alert('El archivo no contiene un JSON de aventurero válido.'); } }; reader.readAsText(file); event.target.value = ''; });
 saveAdventurerBtn.addEventListener('click', saveAdventurerToDatabase);
-sheetLibrarySelect.addEventListener('change', event => { const record = savedAdventurers.find(item => item._id === event.target.value); if (!record) return; adventurer = record.ficha; adventurerId = record._id; saveAdventurer(); fillAdventurerForm(); });
+sheetLibrarySelect.addEventListener('change', event => { const record = savedAdventurers.find(item => item._id === event.target.value); if (!record) return; adventurer = normalizeAdventurerSheet(record.ficha); adventurerId = record._id; saveAdventurer(); fillAdventurerForm(); });
 adventurerSelect.addEventListener('change', event => { assignedAdventurerId = event.target.value; localStorage.setItem('tor_assigned_adventurer', assignedAdventurerId); const record = savedAdventurers.find(item => item._id === assignedAdventurerId); if (!isLocalFile && currentRoom) socket.emit('update-user', { username: currentUser, stance: currentStance, adventurerId: assignedAdventurerId, adventurerName: record?.nombre || '' }); else renderLocalActiveUsers(); });
 
 // ==========================================
@@ -708,7 +723,8 @@ function addRollToUI(roll, isNew) {
     const d12Results = roll.d12Results || [];
     const d6Results = roll.d6Results || [];
     
-    const d6Total = d6Results.reduce((a, b) => a + b, 0);
+    const allDiceTotal = [...d12Results, ...d6Results].reduce((total, value) => total + value, 0);
+    const d6Total = d6Results.reduce((total, value) => total + value, 0);
     const getD12SortValue = (v) => v === 11 ? -1 : (v === 12 ? 13 : v);
     
     let maxD12 = null;
@@ -738,6 +754,24 @@ function addRollToUI(roll, isNew) {
         return `<span class="badge stance-badge ${info.className} ms-2" style="font-size: 0.7rem; font-weight: normal;"><i class="${info.icon} me-1"></i>${info.short}</span>`;
     })() : '';
 
+    const totalsMarkup = d12Results.length === 2
+        ? `
+            <div class="total-badge border-success">
+                <span class="total-val text-success">${maxD12 + d6Total}</span>
+                <span class="total-label">TOTAL MÁXIMO</span>
+            </div>
+            <div class="total-badge border-danger">
+                <span class="total-val text-danger">${minD12 + d6Total}</span>
+                <span class="total-label">TOTAL MÍNIMO</span>
+            </div>
+        `
+        : `
+            <div class="total-badge">
+                <span class="total-val">${allDiceTotal}</span>
+                <span class="total-label">TOTAL</span>
+            </div>
+        `;
+
     card.innerHTML = `
         <div class="d-flex justify-content-between align-items-start">
             <div class="flex-grow-1">
@@ -750,28 +784,7 @@ function addRollToUI(roll, isNew) {
                 ${d6Str}
             </div>
             <div class="total-badge-container">
-                ${d12Results.length === 1 ? `
-                    <div class="total-badge">
-                        <span class="total-val">${renderD12(d12Results[0])}</span>
-                        <span class="total-label">D12</span>
-                    </div>
-                ` : ''}
-                ${d12Results.length > 1 ? `
-                    <div class="total-badge border-success">
-                        <span class="total-val text-success">${renderD12(maxD12)}</span>
-                        <span class="total-label">MAX D12</span>
-                    </div>
-                    <div class="total-badge border-danger">
-                        <span class="total-val text-danger">${renderD12(minD12)}</span>
-                        <span class="total-label">MIN D12</span>
-                    </div>
-                ` : ''}
-                ${d6Results.length > 0 ? `
-                    <div class="total-badge">
-                        <span class="total-val">${d6Total}</span>
-                        <span class="total-label">TOTAL D6</span>
-                    </div>
-                ` : ''}
+                ${totalsMarkup}
             </div>
         </div>
     `;

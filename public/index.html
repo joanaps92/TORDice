@@ -607,7 +607,7 @@
                     <section class="sheet-panel compact-panel">
                         <h2>Estados y sombra</h2>
                         <div class="state-list"><label><input type="checkbox" data-path="estados.cansado"> Cansado</label><label><input type="checkbox" data-path="estados.desanimado"> Desanimado</label><label><input type="checkbox" data-path="estados.herido"> Herido</label></div>
-                        <div class="stat-grid"><label>Días de herida<input type="number" min="0" data-path="estados.diasDeHerida"></label><label>Puntos de sombra<input type="number" min="0" data-path="sombra.puntos"></label><label>Cicatrices<input type="number" min="0" data-path="sombra.cicatrices"></label></div>
+                        <div class="stat-grid"><label>Días de herida<input type="number" min="0" data-path="estados.diasDeHerida"></label><label>Puntos de sombra<input type="number" min="0" data-path="sombra.puntos"></label><label>Cicatrices de la sombra<input type="number" min="0" data-path="sombra.cicatrices"></label><label class="wide">Lesiones<textarea data-path="estados.lesiones" rows="3"></textarea></label></div>
                     </section>
                     <section class="sheet-panel compact-panel">
                         <h2>Compañía</h2>
@@ -617,12 +617,17 @@
 
                 <section class="sheet-panel sheet-combat">
                     <h2>Competencias de combate</h2><div id="combat-skills" class="combat-skills"></div>
+                    <div class="combat-details-grid mt-4">
+                        <label>Recompensas<textarea data-path="desarrollo.recompensas" rows="4"></textarea></label>
+                        <label>Virtudes<textarea data-path="desarrollo.virtudes" rows="4"></textarea></label>
+                        <label>Equipo de viaje<textarea data-path="inventario.equipoViaje" rows="4"></textarea></label>
+                    </div>
                     <h2 class="mt-4">Equipo de guerra</h2>
                     <div id="war-gear-list" class="war-gear-list"></div>
                     <button id="add-war-gear-btn" type="button" class="btn btn-outline-danger btn-sm mt-3"><i class="fa-solid fa-plus me-1"></i> Añadir equipo</button>
                 </section>
                 <section class="sheet-panel sheet-travel">
-                    <h2>Viaje e inventario</h2><label>Equipo de viaje<input data-path="inventario.equipoViaje"></label><div class="stat-grid"><label>Riqueza<input type="number" min="0" data-path="inventario.riqueza"></label><label>Objetos útiles<input data-path="inventario.objetosUtiles" data-list="true" placeholder="Separados por comas"></label><label>Aguante máximo<input type="number" min="0" data-path="estadisticas.aguante.maximo"></label><label>Aguante actual<input type="number" min="0" data-path="estadisticas.aguante.actual"></label><label>Esperanza máxima<input type="number" min="0" data-path="estadisticas.esperanza.maxima"></label><label>Esperanza actual<input type="number" min="0" data-path="estadisticas.esperanza.actual"></label><label>Parada<input type="number" min="0" data-path="estadisticas.parada"></label><label>Carga total<input type="number" min="0" data-path="estadisticas.cargaTotal"></label><label>Fatiga<input type="number" min="0" data-path="estadisticas.fatiga"></label></div>
+                    <h2>Viaje e inventario</h2><div class="stat-grid"><label>Riqueza<input type="number" min="0" data-path="inventario.riqueza"></label><label>Aguante máximo<input type="number" min="0" data-path="estadisticas.aguante.maximo"></label><label>Aguante actual<input type="number" min="0" data-path="estadisticas.aguante.actual"></label><label>Esperanza máxima<input type="number" min="0" data-path="estadisticas.esperanza.maxima"></label><label>Esperanza actual<input type="number" min="0" data-path="estadisticas.esperanza.actual"></label><label>Parada<input type="number" min="0" data-path="estadisticas.parada"></label><label>Carga total<input type="number" min="0" data-path="estadisticas.cargaTotal"></label><label>Fatiga<input type="number" min="0" data-path="estadisticas.fatiga"></label></div>
                 </section>
             </form>
             <footer class="sheet-footer"><span id="adventurer-save-status">Los cambios se guardan automáticamente en este dispositivo.</span><button id="reset-adventurer-btn" class="btn btn-link btn-sm text-danger">Reiniciar ficha</button></footer>
