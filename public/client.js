@@ -563,7 +563,70 @@ function renderUsersList(users) {
                     <span class="fw-bold text-dark text-truncate">${username}</span>
                     ${isMe ? '<span class="badge bg-purple user-you-badge">Tú</span>' : ''}
                     ${adventurerName ? `<span class="small text-muted text-truncate" title="${adventurerName}"><i class="fa-solid fa-scroll me-1"></i>${adventurerName}</span>` : ''}
+                </div>
+                <span class="badge stance-badge ${info.className}" title="${stance}">
+                    <i class="${info.icon} me-1"></i> ${info.short}
+                </span>
+            `;
+
+            activeUsersList.appendChild(card);
+        });
     }
+
+    // 2. Render Battlefield Map Stance Zones
+    if (playersVanguardia && playersAbierta && playersDefensiva && playersRetaguardia) {
+        playersVanguardia.innerHTML = "";
+        playersAbierta.innerHTML = "";
+        playersDefensiva.innerHTML = "";
+        playersRetaguardia.innerHTML = "";
+
+        const zoneCounts = {
+            'Posición de vanguardia': 0,
+            'Posición abierta': 0,
+            'Posición defensiva': 0,
+            'Posición de retaguardia': 0
+        };
+
+        battleZones.forEach(zone => {
+            const zoneStance = zone.getAttribute('data-stance');
+            zone.classList.toggle('is-my-zone', zoneStance === currentStance);
+        });
+
+        users.forEach(userObj => {
+            const username = typeof userObj === 'object' ? userObj.username : userObj;
+            const stance = (typeof userObj === 'object' && userObj.stance) ? userObj.stance : 'Posición abierta';
+            const isMe = (userObj.id && socket && userObj.id === socket.id) || username === currentUser;
+            const chip = document.createElement('div');
+            chip.className = `battle-player-chip ${isMe ? 'is-you' : ''}`;
+            chip.innerHTML = `
+                <i class="fa-solid ${isMe ? 'fa-user-shield text-gold-light' : 'fa-user text-muted'}"></i>
+                <span>${username}</span>
+                ${isMe ? '<span class="badge bg-gold text-dark ms-1" style="font-size: 0.6rem; padding: 2px 5px;">Tú</span>' : ''}
+            `;
+
+            if (stance === 'Posición de vanguardia') {
+                playersVanguardia.appendChild(chip); zoneCounts['Posición de vanguardia']++;
+            } else if (stance === 'Posición defensiva') {
+                playersDefensiva.appendChild(chip); zoneCounts['Posición defensiva']++;
+            } else if (stance === 'Posición de retaguardia') {
+                playersRetaguardia.appendChild(chip); zoneCounts['Posición de retaguardia']++;
+            } else {
+                playersAbierta.appendChild(chip); zoneCounts['Posición abierta']++;
+            }
+        });
+
+        if (zoneCounts['Posición de vanguardia'] === 0) playersVanguardia.innerHTML = '<span class="empty-zone-placeholder"><i class="fa-regular fa-circle-dot me-1"></i>Sin aventureros en vanguardia</span>';
+        if (zoneCounts['Posición abierta'] === 0) playersAbierta.innerHTML = '<span class="empty-zone-placeholder"><i class="fa-regular fa-circle-dot me-1"></i>Sin aventureros en posición abierta</span>';
+        if (zoneCounts['Posición defensiva'] === 0) playersDefensiva.innerHTML = '<span class="empty-zone-placeholder"><i class="fa-regular fa-circle-dot me-1"></i>Sin aventureros en posición defensiva</span>';
+        if (zoneCounts['Posición de retaguardia'] === 0) playersRetaguardia.innerHTML = '<span class="empty-zone-placeholder"><i class="fa-regular fa-circle-dot me-1"></i>Sin aventureros en retaguardia</span>';
+    }
+}
+
+function setupSocketListeners() {
+socket.on('load-history', (history) => {
+    historyList.innerHTML = "";
+    if (history.length === 0) renderEmptyMessage();
+    else { history.forEach(roll => addRollToUI(roll, false)); scrollToBottom(); }
 });
 
 socket.on('new-roll', (roll) => {
@@ -635,8 +698,7 @@ socket.on('room-deleted', () => {
         item.appendChild(deleteBtn);
         roomList.appendChild(item);
     });
-        });
-    });
+});
 }
 
 function addRollToUI(roll, isNew) {
