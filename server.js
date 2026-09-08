@@ -233,7 +233,7 @@ app.post('/api/adventurers', authenticateToken, async (req, res) => {
         if (!nombre) return res.status(400).json({ error: 'El nombre del aventurero es obligatorio.' });
         const duplicate = await Adventurer.findOne({ nombre: { $regex: `^${nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } });
         if (duplicate) return res.status(409).json({ error: 'Ya existe una hoja con ese nombre. Elige otro nombre.' });
-        const adventurer = await Adventurer.create({ nombre, ficha, updatedAt: new Date() });
+        const adventurer = await Adventurer.create({ nombre, trancos: Boolean(ficha.trancos), ficha, updatedAt: new Date() });
         res.status(201).json(adventurer);
     } catch (err) {
         console.error('Error al crear aventurero:', err);
@@ -248,7 +248,7 @@ app.put('/api/adventurers/:id', authenticateToken, async (req, res) => {
         if (!nombre) return res.status(400).json({ error: 'El nombre del aventurero es obligatorio.' });
         const duplicate = await Adventurer.findOne({ _id: { $ne: req.params.id }, nombre: { $regex: `^${nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } });
         if (duplicate) return res.status(409).json({ error: 'Ya existe otra hoja con ese nombre. Elige otro nombre.' });
-        const adventurer = await Adventurer.findByIdAndUpdate(req.params.id, { nombre, ficha, updatedAt: new Date() }, { new: true, runValidators: true });
+        const adventurer = await Adventurer.findByIdAndUpdate(req.params.id, { nombre, trancos: Boolean(ficha.trancos), ficha, updatedAt: new Date() }, { new: true, runValidators: true });
         if (!adventurer) return res.status(404).json({ error: 'Aventurero no encontrado.' });
         res.json(adventurer);
     } catch (err) {

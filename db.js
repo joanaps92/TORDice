@@ -28,6 +28,7 @@ const userSchema = new mongoose.Schema({
 // La ficha se mantiene flexible para poder conservar el JSON completo del aventurero.
 const adventurerSchema = new mongoose.Schema({
   nombre: { type: String, required: true, trim: true },
+  trancos: { type: Boolean, default: false },
   ficha: { type: mongoose.Schema.Types.Mixed, required: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }

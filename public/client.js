@@ -104,6 +104,7 @@ const ADVENTURER_KEY = 'tor_adventurer_draft';
 
 const newAdventurer = () => ({
     _id: null,
+    trancos: false,
     informacionGeneral: { nombre: '', culturaHeroica: '', ocupacion: '', nivelDeVida: '', edad: 0, bendicionCultural: '', heredero: '' },
     atributos: { fuerza: { valor: 0, tn: 20 }, corazon: { valor: 0, tn: 20 }, mente: { valor: 0, tn: 20 } },
     estadisticas: { aguante: { maximo: 0, actual: 0 }, esperanza: { maxima: 0, actual: 0 }, parada: 0, cargaTotal: 0, fatiga: 0 },
@@ -124,21 +125,84 @@ const newWarGearItem = () => ({ item: { tipoItem: '', nombre: '', subtipoItem: '
 const displayName = key => ({ fuerza: 'Fuerza', corazon: 'Corazón', mente: 'Mente', impresionar: 'Impresionar', atletismo: 'Atletismo', alerta: 'Alerta', cazar: 'Cazar', cantar: 'Cantar', oficio: 'Oficio', alentar: 'Alentar', viajar: 'Viajar', perspicacia: 'Perspicacia', curar: 'Curar', cortesia: 'Cortesía', guerrear: 'Guerrear', persuadir: 'Persuadir', sigilo: 'Sigilo', inspeccionar: 'Inspeccionar', explorar: 'Explorar', acertijos: 'Acertijos', saber: 'Saber', hachas: 'Hachas', arcos: 'Arcos', lanzas: 'Lanzas', espadas: 'Espadas' }[key] || key);
 
 function renderSheetDynamicFields() {
-    attributePanels.innerHTML = Object.entries(adventurer.habilidades).map(([attribute, skills]) => `<section class="attribute-panel"><h2 class="attribute-title">${displayName(attribute)}</h2><div class="attribute-stats"><label class="attribute-inline">Valor<input type="number" min="0" data-path="atributos.${attribute}.valor"></label><label class="attribute-inline" title="Número objetivo">NO<input type="number" min="0" data-path="atributos.${attribute}.tn" aria-label="Número objetivo"></label></div>${Object.keys(skills).map(skill => `<div class="skill-row"><span>${displayName(skill)}</span><input type="number" min="0" data-path="habilidades.${attribute}.${skill}.rango" aria-label="Rango de ${displayName(skill)}"><label title="Habilidad favorecida"><input type="checkbox" data-path="habilidades.${attribute}.${skill}.favorecida"> Fav.</label></div>`).join('')}</section>`).join('');
+    attributePanels.innerHTML = Object.entries(adventurer.habilidades).map(([attribute, skills]) => `<section class="attribute-panel"><h2 class="attribute-title">${displayName(attribute)}</h2><div class="attribute-stats"><label class="attribute-inline">Valor<input type="number" min="0" data-path="atributos.${attribute}.valor"></label><label class="attribute-inline" title="Número objetivo">NO<input type="number" min="0" data-path="atributos.${attribute}.tn" aria-label="Número objetivo" readonly></label></div>${Object.keys(skills).map(skill => `<div class="skill-row"><span>${displayName(skill)}</span><input type="number" min="0" data-path="habilidades.${attribute}.${skill}.rango" aria-label="Rango de ${displayName(skill)}"><label title="Habilidad favorecida"><input type="checkbox" data-path="habilidades.${attribute}.${skill}.favorecida"> Fav.</label></div>`).join('')}</section>`).join('');
     combatSkills.innerHTML = Object.keys(adventurer.combate.competencias).map(skill => `<label>${displayName(skill)}<input type="number" min="0" data-path="combate.competencias.${skill}"></label>`).join('');
     if (!adventurer.combate.equipoGuerra.length) adventurer.combate.equipoGuerra.push(newWarGearItem());
     warGearList.innerHTML = adventurer.combate.equipoGuerra.map((_, index) => `<div class="war-gear-entry"><div class="d-flex justify-content-between align-items-center mb-2"><span class="war-gear-title">Equipo ${index + 1}</span><button class="btn btn-link text-danger p-0 remove-war-gear-btn" type="button" data-gear-index="${index}" title="Eliminar equipo"><i class="fa-solid fa-trash-can"></i></button></div><div class="equipment-grid"><label>Nombre<input data-path="combate.equipoGuerra.${index}.item.nombre"></label><label>Tipo<input data-path="combate.equipoGuerra.${index}.item.tipoItem"></label><label>Subtipo<input data-path="combate.equipoGuerra.${index}.item.subtipoItem"></label><label>Competencia<input data-path="combate.equipoGuerra.${index}.item.competencia"></label><label>Daño<input type="number" min="0" data-path="combate.equipoGuerra.${index}.item.dano"></label><label>Herida<input type="number" min="0" data-path="combate.equipoGuerra.${index}.item.herida"></label><label>Carga<input type="number" min="0" data-path="combate.equipoGuerra.${index}.item.carga"></label><label class="wide">Notas<input data-path="combate.equipoGuerra.${index}.item.notas"></label></div></div>`).join('');
 }
-function fillAdventurerForm() { renderSheetDynamicFields(); adventurerForm.querySelectorAll('[data-path]').forEach(input => { const value = getAt(adventurer, input.dataset.path); input.checked = input.type === 'checkbox' && Boolean(value); input.value = input.dataset.list ? (value || []).join(', ') : (input.type === 'checkbox' ? '' : (value ?? '')); }); }
+function fillAdventurerForm() { updateCalculatedFields(); renderSheetDynamicFields(); adventurerForm.querySelectorAll('[data-path]').forEach(input => { const value = getAt(adventurer, input.dataset.path); input.checked = input.type === 'checkbox' && Boolean(value); input.value = input.dataset.list ? (Array.isArray(value) ? value.join(', ') : (value ?? '')) : (input.type === 'checkbox' ? '' : (value ?? '')); }); }
 function saveAdventurer() { localStorage.setItem(ADVENTURER_KEY, JSON.stringify(adventurer)); const status = document.getElementById('adventurer-save-status'); if (status) status.textContent = 'Borrador guardado en este dispositivo. Pulsa Guardar para sincronizarlo.'; }
-function normalizeAdventurerSheet(sheet) {
+function normalizeAdventurerSheet(sheet, trancos = false) {
     const base = newAdventurer();
-    const normalized = { ...base, ...sheet, estados: { ...base.estados, ...sheet.estados }, sombra: { ...base.sombra, ...sheet.sombra }, desarrollo: { ...base.desarrollo, ...sheet.desarrollo }, inventario: { ...base.inventario, ...sheet.inventario } };
+    const normalized = { ...base, ...sheet, trancos: Boolean(sheet?.trancos ?? trancos), estados: { ...base.estados, ...sheet?.estados }, sombra: { ...base.sombra, ...sheet?.sombra }, desarrollo: { ...base.desarrollo, ...sheet?.desarrollo }, inventario: { ...base.inventario, ...sheet?.inventario } };
     ['virtudes', 'recompensas'].forEach(key => {
         if (Array.isArray(normalized.desarrollo[key])) normalized.desarrollo[key] = normalized.desarrollo[key].join('\n');
     });
     if (Array.isArray(normalized.inventario.equipoViaje)) normalized.inventario.equipoViaje = normalized.inventario.equipoViaje.join('\n');
     return normalized;
+}
+function updateCalculatedFields() {
+    const attributeTarget = adventurer.trancos ? 18 : 20;
+    Object.values(adventurer.atributos || {}).forEach(attribute => { attribute.tn = attributeTarget - Number(attribute.valor || 0); });
+    adventurer.estadisticas.cargaTotal = (adventurer.combate?.equipoGuerra || []).reduce((total, gear) => total + Number(gear.item?.carga || 0), 0);
+}
+function syncCalculatedInputs() {
+    ['atributos.fuerza.tn', 'atributos.corazon.tn', 'atributos.mente.tn', 'estadisticas.cargaTotal'].forEach(path => {
+        const input = adventurerForm.querySelector(`[data-path="${path}"]`);
+        if (input) input.value = getAt(adventurer, path) ?? '';
+    });
+}
+function setGuidedValue(path, value) { setAt(adventurer, path, value); updateCalculatedFields(); fillAdventurerForm(); }
+function askGuidedValue(label, path, options = {}) {
+    if (options.type === 'checkbox') return setGuidedValue(path, window.confirm(label));
+    const suffix = options.choices ? `\n\nOpciones:\n${options.choices.map((choice, index) => `${index + 1}. ${choice}`).join('\n')}` : '';
+    const answer = window.prompt(`${label}${suffix}`, options.defaultValue ?? '');
+    if (answer === null) return false;
+    if (options.type === 'number') {
+        const value = Number(answer);
+        setGuidedValue(path, Number.isFinite(value) ? value : 0);
+    } else if (options.choices) {
+        const index = Number(answer) - 1;
+        setGuidedValue(path, options.choices[index] || answer.trim());
+    } else if (options.list) {
+        setGuidedValue(path, answer.split(',').map(item => item.trim()).filter(Boolean));
+    } else setGuidedValue(path, answer);
+    return true;
+}
+function setShadowPathFromOccupation() {
+    const paths = { 'Buscador de tesoros': 'Mal del dragón', 'Campeón': 'Maldición de la venganza', 'Capitán': 'Atracción del poder', 'Erudito': 'Atracción de los secretos', 'Guardián': 'Camino de la desesperación', 'Mensajero': 'Locura del trotamundos' };
+    adventurer.sombra.senda = paths[adventurer.informacionGeneral.ocupacion] || '';
+}
+function guideNewAdventurer() {
+    adventurer.trancos = window.confirm('¿Quieres crear la hoja siguiendo el modo Trancos?\nAceptar = Trancos · Cancelar = tradicional');
+    const cultureChoices = ['Elfos de Lindon', 'Enanos del pueblo de Durin', 'Hobbits de la comarca', 'Hombres de Bardo', 'Hombres de Bree', 'Montaraces del norte', 'Elfos de Lórien', 'Altos elfos de Rivendel', 'Enanos de Nogrod y Belegost'];
+    const occupationChoices = ['Buscador de tesoros', 'Campeón', 'Capitán', 'Erudito', 'Guardián', 'Mensajero'];
+    askGuidedValue('Nombre del aventurero', 'informacionGeneral.nombre');
+    askGuidedValue('Cultura heroica', 'informacionGeneral.culturaHeroica', { choices: cultureChoices });
+    askGuidedValue('Ocupación', 'informacionGeneral.ocupacion', { choices: occupationChoices });
+    setShadowPathFromOccupation();
+    askGuidedValue('Nivel de vida', 'informacionGeneral.nivelDeVida');
+    askGuidedValue('Edad', 'informacionGeneral.edad', { type: 'number' });
+    askGuidedValue('Bendición cultural', 'informacionGeneral.bendicionCultural');
+    askGuidedValue('Heredero', 'informacionGeneral.heredero');
+    askGuidedValue('Defectos (separados por comas)', 'sombra.defectos', { list: true });
+    askGuidedValue('Rasgos distintivos (separados por comas)', 'rasgosDistintivos', { list: true });
+    ['fuerza', 'corazon', 'mente'].forEach(attribute => askGuidedValue(`Valor de ${displayName(attribute)}`, `atributos.${attribute}.valor`, { type: 'number' }));
+    Object.entries(adventurer.habilidades).forEach(([attribute, skills]) => Object.keys(skills).forEach(skill => {
+        askGuidedValue(`Rango de ${displayName(skill)} (${displayName(attribute)})`, `habilidades.${attribute}.${skill}.rango`, { type: 'number' });
+        askGuidedValue(`¿${displayName(skill)} favorecida?`, `habilidades.${attribute}.${skill}.favorecida`, { type: 'checkbox' });
+    }));
+    const manualPaths = ['desarrollo.valor', 'desarrollo.sabiduria', 'desarrollo.puntosAventura', 'desarrollo.puntosHabilidad', 'estados.cansado', 'estados.desanimado', 'estados.herido', 'estados.diasDeHerida', 'sombra.puntos', 'sombra.cicatrices', 'estadisticas.aguante.maximo', 'estadisticas.aguante.actual', 'estadisticas.esperanza.maxima', 'estadisticas.esperanza.actual', 'estadisticas.parada', 'estadisticas.fatiga', 'estados.lesiones', 'compania.vinculoComunidad', 'compania.puntuacionComunidad', 'compania.refugio'];
+    manualPaths.forEach(path => { const current = getAt(adventurer, path); askGuidedValue(`Introduce ${path.split('.').pop()}`, path, { type: typeof current === 'number' ? 'number' : (typeof current === 'boolean' ? 'checkbox' : undefined) }); });
+    Object.keys(adventurer.combate.competencias).forEach(skill => askGuidedValue(`Competencia de ${displayName(skill)}`, `combate.competencias.${skill}`, { type: 'number' }));
+    ['desarrollo.recompensas', 'desarrollo.virtudes', 'inventario.equipoViaje'].forEach(path => askGuidedValue(`Introduce ${path.split('.').pop()}`, path));
+    adventurer.combate.equipoGuerra.forEach((gear, index) => ['nombre', 'tipoItem', 'subtipoItem', 'competencia', 'dano', 'herida', 'carga', 'notas'].forEach(field => {
+        const path = `combate.equipoGuerra.${index}.item.${field}`;
+        askGuidedValue(`Equipo de guerra ${index + 1}: ${field}`, path, { type: typeof gear.item[field] === 'number' ? 'number' : undefined });
+    }));
+    ['inventario.riqueza'].forEach(path => askGuidedValue(`Introduce ${path.split('.').pop()}`, path, { type: 'number' }));
+    updateCalculatedFields();
+    fillAdventurerForm();
 }
 function renderAdventurerSelects() {
     const options = savedAdventurers.map(item => `<option value="${item._id}">${item.nombre}</option>`).join('');
@@ -178,23 +242,27 @@ async function saveAdventurerToDatabase() {
     } catch (error) { if (status) status.textContent = error.message; }
 }
 
-adventurerForm.addEventListener('input', event => { const input = event.target; if (!input.dataset.path) return; let value = input.type === 'checkbox' ? input.checked : input.value; if (input.type === 'number') value = Number(value || 0); if (input.dataset.list) value = value.split(',').map(item => item.trim()).filter(Boolean); setAt(adventurer, input.dataset.path, value); saveAdventurer(); });
+adventurerForm.addEventListener('input', event => { const input = event.target; if (!input.dataset.path) return; let value = input.type === 'checkbox' ? input.checked : input.value; if (input.type === 'number') value = Number(value || 0); if (input.dataset.list) value = value.split(',').map(item => item.trim()).filter(Boolean); setAt(adventurer, input.dataset.path, value); if (input.dataset.path === 'informacionGeneral.ocupacion') { setShadowPathFromOccupation(); const shadowPathInput = adventurerForm.querySelector('[data-path="sombra.senda"]'); if (shadowPathInput) shadowPathInput.value = adventurer.sombra.senda; } updateCalculatedFields(); syncCalculatedInputs(); saveAdventurer(); });
+adventurerForm.addEventListener('change', event => { if (event.target.dataset.path !== 'informacionGeneral.ocupacion') return; setShadowPathFromOccupation(); const shadowPathInput = adventurerForm.querySelector('[data-path="sombra.senda"]'); if (shadowPathInput) shadowPathInput.value = adventurer.sombra.senda; saveAdventurer(); });
 addWarGearBtn.addEventListener('click', () => { adventurer.combate.equipoGuerra.push(newWarGearItem()); fillAdventurerForm(); saveAdventurer(); });
 warGearList.addEventListener('click', event => { const button = event.target.closest('.remove-war-gear-btn'); if (!button) return; adventurer.combate.equipoGuerra.splice(Number(button.dataset.gearIndex), 1); fillAdventurerForm(); saveAdventurer(); });
 openAdventurerButtons.forEach(button => button.addEventListener('click', async () => {
     await fetchAdventurers();
     const assignedSheet = currentRoom && assignedAdventurerId ? savedAdventurers.find(item => item._id === assignedAdventurerId) : null;
-    adventurer = assignedSheet ? normalizeAdventurerSheet(assignedSheet.ficha) : newAdventurer();
+    const creatingNewSheet = !assignedSheet;
+    adventurer = assignedSheet ? normalizeAdventurerSheet(assignedSheet.ficha, assignedSheet.trancos) : newAdventurer();
     adventurerId = assignedSheet?._id || null;
+    setShadowPathFromOccupation();
     fillAdventurerForm();
     roomSelectionScreen.classList.add('d-none'); appScreen.classList.add('d-none'); adventurerScreen.classList.remove('d-none'); window.scrollTo(0, 0);
+    if (creatingNewSheet) guideNewAdventurer();
 }));
 closeAdventurerBtn.addEventListener('click', () => { adventurerScreen.classList.add('d-none'); (currentRoom ? appScreen : roomSelectionScreen).classList.remove('d-none'); });
 exportAdventurerBtn.addEventListener('click', () => { const blob = new Blob([JSON.stringify(adventurer, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${adventurer.informacionGeneral.nombre || 'aventurero'}.json`; link.click(); URL.revokeObjectURL(link.href); });
 resetAdventurerBtn.addEventListener('click', () => { if (confirm('¿Reiniciar todos los campos de la ficha?')) { adventurer = newAdventurer(); saveAdventurer(); fillAdventurerForm(); } });
 adventurerImport.addEventListener('change', event => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { adventurer = JSON.parse(reader.result); adventurerId = null; saveAdventurer(); fillAdventurerForm(); } catch (_) { alert('El archivo no contiene un JSON de aventurero válido.'); } }; reader.readAsText(file); event.target.value = ''; });
 saveAdventurerBtn.addEventListener('click', saveAdventurerToDatabase);
-sheetLibrarySelect.addEventListener('change', event => { const record = savedAdventurers.find(item => item._id === event.target.value); if (!record) return; adventurer = normalizeAdventurerSheet(record.ficha); adventurerId = record._id; saveAdventurer(); fillAdventurerForm(); });
+sheetLibrarySelect.addEventListener('change', event => { const record = savedAdventurers.find(item => item._id === event.target.value); if (!record) return; adventurer = normalizeAdventurerSheet(record.ficha, record.trancos); adventurerId = record._id; setShadowPathFromOccupation(); saveAdventurer(); fillAdventurerForm(); });
 adventurerSelect.addEventListener('change', event => { assignedAdventurerId = event.target.value; localStorage.setItem('tor_assigned_adventurer', assignedAdventurerId); const record = savedAdventurers.find(item => item._id === assignedAdventurerId); if (!isLocalFile && currentRoom) socket.emit('update-user', { username: currentUser, stance: currentStance, adventurerId: assignedAdventurerId, adventurerName: record?.nombre || '' }); else renderLocalActiveUsers(); });
 
 // ==========================================

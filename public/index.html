@@ -584,13 +584,13 @@
                     <h2>Nombre</h2>
                     <input class="sheet-name" data-path="informacionGeneral.nombre" placeholder="Nombre del aventurero" aria-label="Nombre" required>
                     <div class="identity-grid">
-                        <label>Cultura heroica<input data-path="informacionGeneral.culturaHeroica"></label>
-                        <label>Ocupación<input data-path="informacionGeneral.ocupacion"></label>
+                        <label>Cultura heroica<select data-path="informacionGeneral.culturaHeroica"><option value="">Selecciona una cultura…</option><option>Elfos de Lindon</option><option>Enanos del pueblo de Durin</option><option>Hobbits de la comarca</option><option>Hombres de Bardo</option><option>Hombres de Bree</option><option>Montaraces del norte</option><option>Elfos de Lórien</option><option>Altos elfos de Rivendel</option><option>Enanos de Nogrod y Belegost</option></select></label>
+                        <label>Ocupación<select data-path="informacionGeneral.ocupacion"><option value="">Selecciona una ocupación…</option><option>Buscador de tesoros</option><option>Campeón</option><option>Capitán</option><option>Erudito</option><option>Guardián</option><option>Mensajero</option></select></label>
                         <label>Nivel de vida<input data-path="informacionGeneral.nivelDeVida"></label>
                         <label>Edad<input type="number" min="0" data-path="informacionGeneral.edad"></label>
                         <label>Bendición cultural<input data-path="informacionGeneral.bendicionCultural"></label>
                         <label>Heredero<input data-path="informacionGeneral.heredero"></label>
-                        <label>Camino de la sombra<input data-path="sombra.senda"></label>
+                        <label>Camino de la sombra<input data-path="sombra.senda" readonly></label>
                         <label>Defectos<input data-path="sombra.defectos" data-list="true" placeholder="Separados por comas"></label>
                         <label class="wide">Rasgos distintivos<input data-path="rasgosDistintivos" data-list="true" placeholder="Separados por comas"></label>
                     </div>
@@ -607,7 +607,7 @@
                     <section class="sheet-panel compact-panel">
                         <h2>Estados y sombra</h2>
                         <div class="state-list"><label><input type="checkbox" data-path="estados.cansado"> Cansado</label><label><input type="checkbox" data-path="estados.desanimado"> Desanimado</label><label><input type="checkbox" data-path="estados.herido"> Herido</label></div>
-                        <div class="stat-grid"><label>Días de herida<input type="number" min="0" data-path="estados.diasDeHerida"></label><label>Puntos de sombra<input type="number" min="0" data-path="sombra.puntos"></label><label>Cicatrices de la sombra<input type="number" min="0" data-path="sombra.cicatrices"></label><label class="wide">Lesiones<textarea data-path="estados.lesiones" rows="3"></textarea></label></div>
+                        <div class="stat-grid"><label>Días de herida<input type="number" min="0" data-path="estados.diasDeHerida"></label><label>Puntos de sombra<input type="number" min="0" data-path="sombra.puntos"></label><label>Cicatrices de la sombra<input type="number" min="0" data-path="sombra.cicatrices"></label><label>Aguante máximo<input type="number" min="0" data-path="estadisticas.aguante.maximo"></label><label>Aguante actual<input type="number" min="0" data-path="estadisticas.aguante.actual"></label><label>Esperanza máxima<input type="number" min="0" data-path="estadisticas.esperanza.maxima"></label><label>Esperanza actual<input type="number" min="0" data-path="estadisticas.esperanza.actual"></label><label>Parada<input type="number" min="0" data-path="estadisticas.parada"></label><label>Fatiga<input type="number" min="0" data-path="estadisticas.fatiga"></label><label class="wide">Lesiones<textarea data-path="estados.lesiones" rows="3"></textarea></label></div>
                     </section>
                     <section class="sheet-panel compact-panel">
                         <h2>Compañía</h2>
@@ -627,7 +627,7 @@
                     <button id="add-war-gear-btn" type="button" class="btn btn-outline-danger btn-sm mt-3"><i class="fa-solid fa-plus me-1"></i> Añadir equipo</button>
                 </section>
                 <section class="sheet-panel sheet-travel">
-                    <h2>Viaje e inventario</h2><div class="stat-grid"><label>Riqueza<input type="number" min="0" data-path="inventario.riqueza"></label><label>Aguante máximo<input type="number" min="0" data-path="estadisticas.aguante.maximo"></label><label>Aguante actual<input type="number" min="0" data-path="estadisticas.aguante.actual"></label><label>Esperanza máxima<input type="number" min="0" data-path="estadisticas.esperanza.maxima"></label><label>Esperanza actual<input type="number" min="0" data-path="estadisticas.esperanza.actual"></label><label>Parada<input type="number" min="0" data-path="estadisticas.parada"></label><label>Carga total<input type="number" min="0" data-path="estadisticas.cargaTotal"></label><label>Fatiga<input type="number" min="0" data-path="estadisticas.fatiga"></label></div>
+                    <h2>Viaje e inventario</h2><div class="stat-grid"><label>Riqueza<input type="number" min="0" data-path="inventario.riqueza"></label><label class="wide">Carga total<input type="number" min="0" data-path="estadisticas.cargaTotal" readonly></label></div>
                 </section>
             </form>
             <footer class="sheet-footer"><span id="adventurer-save-status">Los cambios se guardan automáticamente en este dispositivo.</span><button id="reset-adventurer-btn" class="btn btn-link btn-sm text-danger">Reiniciar ficha</button></footer>
