@@ -135,6 +135,7 @@ const cultureSkillGroups = {
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
 const getCultureById = id => cultures.find(culture => culture.id === id) || null;
 const getCultureByName = name => cultures.find(culture => culture.name === name) || null;
+const getCultureByReference = reference => getCultureById(reference) || getCultureByName(reference) || null;
 const getOccupationByName = name => occupations.find(occupation => occupation.name === name) || null;
 
 async function loadCultures() {
@@ -167,7 +168,7 @@ async function loadEquipmentCatalog() {
 function renderCultureSelectors() {
     const selects = document.querySelectorAll('[data-culture-select]');
     selects.forEach(select => {
-        const selectedCulture = getCultureById(adventurer?.creation?.cultureId) || getCultureByName(adventurer?.informacionGeneral?.culturaHeroica);
+        const selectedCulture = getCultureByReference(adventurer?.creation?.cultureId) || getCultureByName(adventurer?.informacionGeneral?.culturaHeroica);
         const currentId = selectedCulture?.id || select.value || '';
         select.innerHTML = `<option value="">Selecciona una cultura…</option>${cultures.map(culture => `<option value="${culture.id}">${escapeHtml(culture.name)}</option>`).join('')}`;
         select.value = currentId;
@@ -241,7 +242,7 @@ function syncTrancosRuleNotice() {
     if (!notice) return;
     notice.classList.toggle('d-none', !adventurer.trancos);
 }
-function fillAdventurerForm() { updateCalculatedFields(); renderSheetDynamicFields(); renderCultureSelectors(); adventurerForm.querySelectorAll('[data-path]').forEach(input => { const value = input.dataset.cultureSelect ? (adventurer.creation?.cultureId || getCultureByName(adventurer.informacionGeneral.culturaHeroica)?.id || '') : getAt(adventurer, input.dataset.path); input.checked = input.type === 'checkbox' && Boolean(value); input.value = input.dataset.list ? (Array.isArray(value) ? value.join(', ') : (value ?? '')) : (input.type === 'checkbox' ? '' : (value ?? '')); }); syncTrancosRuleNotice(); }
+function fillAdventurerForm() { updateCalculatedFields(); renderSheetDynamicFields(); renderCultureSelectors(); adventurerForm.querySelectorAll('[data-path]').forEach(input => { const value = input.dataset.cultureSelect ? (getCultureByReference(adventurer.creation?.cultureId) || getCultureByName(adventurer.informacionGeneral.culturaHeroica))?.id || '' : getAt(adventurer, input.dataset.path); input.checked = input.type === 'checkbox' && Boolean(value); input.value = input.dataset.list ? (Array.isArray(value) ? value.join(', ') : (value ?? '')) : (input.type === 'checkbox' ? '' : (value ?? '')); }); syncTrancosRuleNotice(); }
 function saveAdventurer() { localStorage.setItem(ADVENTURER_KEY, JSON.stringify(adventurer)); const status = document.getElementById('adventurer-save-status'); if (status) status.textContent = 'Borrador guardado en este dispositivo. Pulsa Guardar para sincronizarlo.'; }
 function normalizeAdventurerSheet(sheet, trancos = false) {
     const base = newAdventurer();
@@ -303,7 +304,7 @@ let guidedStep = 0;
 const guidedStepCount = 10;
 const guidedOccupations = ['Buscador de tesoros', 'Campeón', 'Capitán', 'Erudito', 'Guardián', 'Mensajero'];
 const guidedSelectOptions = options => options.map(option => `<option value="${option}">${option}</option>`).join('');
-let guidedDraft = { cultureId: '', attributeRoll: null, favoredSkills: [], occupationFavoredSkills: [], combatProficiencies: {}, additionalRanks: { skills: {}, combat: {} }, equipment: { weapons: {}, armor: '', shield: '', helmet: '' }, distinctiveFeatures: [], occupationTraitOption: '' };
+let guidedDraft = { trancos: false, cultureId: '', attributeRoll: null, favoredSkills: [], occupationFavoredSkills: [], combatProficiencies: {}, additionalRanks: { skills: {}, combat: {} }, equipment: { weapons: {}, armor: '', shield: '', helmet: '' }, distinctiveFeatures: [], occupationTraitOption: '' };
 
 function guidedField(path, label, type = 'text', extra = '') {
     return `<label class="guided-field">${label}<input class="form-control tor-input" type="${type}" data-guided-path="${path}" ${extra}></label>`;
@@ -578,14 +579,15 @@ function renderGuidedStep() {
 }
 
 function updateGuidedValue(input) {
-    if (!input?.dataset?.guidedPath) return;
     if (input.matches('[data-guided-mode]')) {
         const previousMode = adventurer.trancos;
         adventurer.trancos = input.value === 'true';
+        guidedDraft.trancos = adventurer.trancos;
         if (previousMode !== adventurer.trancos) guidedDraft.additionalRanks = { skills: {}, combat: {} };
         updateCalculatedFields();
         return;
     }
+    if (!input?.dataset?.guidedPath) return;
     const path = input.dataset.guidedPath;
     let value = input.value;
     if (input.type === 'number') value = Number(value || 0);
@@ -631,6 +633,7 @@ function closeGuidedAdventurerGuide() {
 function completeGuidedCreation() {
     const culture = getCultureById(guidedDraft.cultureId);
     if (!culture || !guidedDraft.attributeRoll) return;
+    adventurer.trancos = Boolean(guidedDraft.trancos);
     adventurer = applyCultureToAdventurer(adventurer, culture, guidedDraft);
     calculatedOverrides = new Set();
     closeGuidedAdventurerGuide();
@@ -641,7 +644,7 @@ async function guideNewAdventurer() {
     const savedOccupation = getOccupationByName(adventurer.informacionGeneral.ocupacion);
     const savedOccupationFeature = adventurer.creation?.occupationDistinctiveFeature || '';
     const savedOccupationTraitOption = savedOccupation?.distinctiveFeature?.options?.find(option => savedOccupationFeature === `${savedOccupation.distinctiveFeature.name}: ${option}`) || '';
-    guidedDraft = { cultureId: adventurer.creation?.cultureId || '', attributeRoll: adventurer.creation?.attributeRoll || null, favoredSkills: [...(adventurer.creation?.favoredSkills || [])], occupationFavoredSkills: [...(adventurer.creation?.occupationFavoredSkills || [])], combatProficiencies: { ...(adventurer.creation?.combatProficiencies || {}) }, additionalRanks: JSON.parse(JSON.stringify(adventurer.creation?.additionalRanks || { skills: {}, combat: {} })), equipment: JSON.parse(JSON.stringify(adventurer.creation?.equipment || { weapons: {}, armor: '', shield: '', helmet: '' })), distinctiveFeatures: [...(adventurer.creation?.distinctiveFeatures || adventurer.rasgosDistintivos || [])].filter(feature => feature !== TRANCOS_FEATURE), occupationTraitOption: savedOccupationTraitOption };
+    guidedDraft = { trancos: Boolean(adventurer.trancos), cultureId: adventurer.creation?.cultureId || '', attributeRoll: adventurer.creation?.attributeRoll || null, favoredSkills: [...(adventurer.creation?.favoredSkills || [])], occupationFavoredSkills: [...(adventurer.creation?.occupationFavoredSkills || [])], combatProficiencies: { ...(adventurer.creation?.combatProficiencies || {}) }, additionalRanks: JSON.parse(JSON.stringify(adventurer.creation?.additionalRanks || { skills: {}, combat: {} })), equipment: JSON.parse(JSON.stringify(adventurer.creation?.equipment || { weapons: {}, armor: '', shield: '', helmet: '' })), distinctiveFeatures: [...(adventurer.creation?.distinctiveFeatures || adventurer.rasgosDistintivos || [])].filter(feature => feature !== TRANCOS_FEATURE), occupationTraitOption: savedOccupationTraitOption };
     guidedStep = 0;
     renderGuidedStep();
     if (guidedModal) guidedModal.show();
@@ -659,6 +662,11 @@ guidedForm.addEventListener('change', event => {
         guidedDraft.additionalRanks = { skills: {}, combat: {} };
         guidedDraft.equipment = { weapons: {}, armor: '', shield: '', helmet: '' };
         guidedDraft.distinctiveFeatures = [];
+        renderGuidedStep();
+        return;
+    }
+    if (input.matches('[data-guided-mode]')) {
+        updateGuidedValue(input);
         renderGuidedStep();
         return;
     }
@@ -773,7 +781,7 @@ adventurerForm.addEventListener('input', event => { const input = event.target; 
 adventurerForm.addEventListener('change', async event => {
     const input = event.target;
     if (input.dataset.cultureSelect) {
-        const selected = getCultureById(input.value);
+        const selected = getCultureByReference(input.value);
         const previousId = adventurer.creation?.cultureId || '';
         if (adventurer.creation?.completed && selected?.id !== previousId) {
             const accepted = await appConfirm('La ficha ya tiene una cultura aplicada. Cambiarla no sobrescribirá sus valores; tendrás que volver a ejecutar el asistente para recalcularla. ¿Continuar?', 'Cambiar cultura');
