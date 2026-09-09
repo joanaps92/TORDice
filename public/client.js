@@ -167,9 +167,14 @@ async function loadEquipmentCatalog() {
 function renderCultureSelectors() {
     const selects = document.querySelectorAll('[data-culture-select]');
     selects.forEach(select => {
-        const currentId = adventurer?.creation?.cultureId || getCultureByName(adventurer?.informacionGeneral?.culturaHeroica)?.id || select.value || '';
+        const selectedCulture = getCultureById(adventurer?.creation?.cultureId) || getCultureByName(adventurer?.informacionGeneral?.culturaHeroica);
+        const currentId = selectedCulture?.id || select.value || '';
         select.innerHTML = `<option value="">Selecciona una cultura…</option>${cultures.map(culture => `<option value="${culture.id}">${escapeHtml(culture.name)}</option>`).join('')}`;
         select.value = currentId;
+        if (selectedCulture && adventurer?.informacionGeneral) {
+            adventurer.informacionGeneral.culturaHeroica = selectedCulture.name;
+            if (adventurer.creation) adventurer.creation.cultureId = selectedCulture.id;
+        }
     });
 }
 
