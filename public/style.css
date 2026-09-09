@@ -1063,10 +1063,17 @@ h1, h2, h3, h4, h5, h6,
 .attribute-choice em { color: var(--tor-ink-muted); font-size: .84rem; font-style: normal; }
 .guided-choice-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .guided-choice-list label { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border: 1px solid var(--tor-red-border); border-radius: 5px; color: var(--tor-ink); font: 1rem 'Crimson Pro', Georgia, serif; }
+.guided-choice-rank { display: inline-flex; align-items: center; padding: 2px 6px; color: #fff; background: var(--tor-red); border-radius: 999px; font: 700 .62rem 'Cinzel', serif; font-style: normal; text-transform: uppercase; }
+.guided-traits-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.guided-trait-choice { display: flex; align-items: center; gap: 9px; padding: 12px 14px; border: 1px solid var(--tor-red-border); border-radius: 5px; color: var(--tor-ink); background: rgba(255,255,255,.55); cursor: pointer; font: 1rem 'Crimson Pro', Georgia, serif; transition: all .2s ease; }
+.guided-trait-choice:hover, .guided-trait-choice.selected { border-color: var(--tor-red); background: rgba(188,44,26,.1); box-shadow: 0 0 0 2px rgba(188,44,26,.12); }
+.guided-trait-choice input { accent-color: var(--tor-red); }
+.guided-selection-count { margin: 12px 0 0; color: var(--tor-ink-muted); font: italic 1rem 'Crimson Pro', Georgia, serif; }
+.guided-selection-count strong { color: var(--tor-red-dark); }
 
 @media (max-width: 575.98px) {
     .guided-mode-grid, .guided-attribute-grid, .guided-fields-grid { grid-template-columns: 1fr; }
-    .attribute-choice-grid, .guided-choice-list, .culture-summary-grid { grid-template-columns: 1fr; }
+    .attribute-choice-grid, .guided-choice-list, .guided-traits-grid, .culture-summary-grid { grid-template-columns: 1fr; }
     .culture-summary-grid > .wide { grid-column: auto; }
     .guided-field:first-child { grid-column: auto; }
     .guided-adventurer-modal .modal-header { padding: 1rem 1rem .7rem; }

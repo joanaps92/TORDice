@@ -180,7 +180,7 @@ let calculatedOverrides = new Set();
 const newAdventurer = () => ({
     _id: null,
     trancos: false,
-    creation: { version: 1, cultureId: '', attributeRoll: null, favoredSkills: [], combatProficiencies: {}, completed: false },
+    creation: { version: 1, cultureId: '', attributeRoll: null, favoredSkills: [], combatProficiencies: {}, distinctiveFeatures: [], completed: false },
     informacionGeneral: { nombre: '', culturaHeroica: '', ocupacion: '', nivelDeVida: '', edad: 0, bendicionCultural: '', heredero: '' },
     atributos: { fuerza: { valor: 0, tn: 20 }, corazon: { valor: 0, tn: 20 }, mente: { valor: 0, tn: 20 } },
     estadisticas: { aguante: { maximo: 0, actual: 0 }, esperanza: { maxima: 0, actual: 0 }, parada: 0, cargaTotal: 0, fatiga: 0 },
@@ -256,10 +256,10 @@ const guidedNextBtn = document.getElementById('guided-next-btn');
 const guidedExitBtn = document.getElementById('guided-exit-btn');
 const guidedCloseBtn = document.getElementById('guided-close-btn');
 let guidedStep = 0;
-const guidedStepCount = 7;
+const guidedStepCount = 8;
 const guidedOccupations = ['Buscador de tesoros', 'Campeón', 'Capitán', 'Erudito', 'Guardián', 'Mensajero'];
 const guidedSelectOptions = options => options.map(option => `<option value="${option}">${option}</option>`).join('');
-let guidedDraft = { cultureId: '', attributeRoll: null, favoredSkills: [], combatProficiencies: {} };
+let guidedDraft = { cultureId: '', attributeRoll: null, favoredSkills: [], combatProficiencies: {}, distinctiveFeatures: [] };
 
 function guidedField(path, label, type = 'text', extra = '') {
     return `<label class="guided-field">${label}<input class="form-control tor-input" type="${type}" data-guided-path="${path}" ${extra}></label>`;
@@ -289,9 +289,16 @@ function renderCombatChoices(culture) {
     culture.combatProficiencies.forEach(choice => { if (!guidedDraft.combatProficiencies[choice.id]) guidedDraft.combatProficiencies[choice.id] = choice.options[0]; });
     const choices = culture.combatProficiencies.map(choice => {
         const value = guidedDraft.combatProficiencies[choice.id] || choice.options[0];
-        return `<label class="guided-field">${escapeHtml(choice.label)}<select class="form-select tor-select" data-guided-combat="${choice.id}">${choice.options.map(option => `<option value="${option}" ${option === value ? 'selected' : ''}>${displayName(option)}</option>`).join('')}</select></label>`;
+        return `<label class="guided-field"><span>${escapeHtml(choice.label)} <em class="guided-choice-rank">Rango ${choice.rank}</em></span><select class="form-select tor-select" data-guided-combat="${choice.id}">${choice.options.map(option => `<option value="${option}" ${option === value ? 'selected' : ''}>${displayName(option)}</option>`).join('')}</select></label>`;
     }).join('');
-    return `<div class="guided-intro"><i class="fa-solid fa-shield-halved"></i><p>Resuelve las competencias de combate que ofrece la cultura.</p></div><div class="guided-fields-grid">${choices}</div>`;
+    return `<div class="guided-intro"><i class="fa-solid fa-shield-halved"></i><p>Elige la competencia que recibe cada rango indicado por la cultura.</p></div><div class="guided-fields-grid">${choices}</div>`;
+}
+
+function renderTraitChoices(culture) {
+    if (!culture) return '<div class="guided-intro"><p>Selecciona primero una cultura.</p></div>';
+    const selected = guidedDraft.distinctiveFeatures || [];
+    const choices = culture.distinctiveFeatures.map(feature => `<label class="guided-trait-choice ${selected.includes(feature) ? 'selected' : ''}"><input type="checkbox" data-guided-trait="${escapeHtml(feature)}" ${selected.includes(feature) ? 'checked' : ''}><span>${escapeHtml(feature)}</span></label>`).join('');
+    return `<div class="guided-intro"><i class="fa-solid fa-feather-pointed"></i><p>Elige exactamente dos rasgos distintivos de la lista disponible para ${escapeHtml(culture.name)}.</p></div><div class="guided-traits-grid">${choices}</div><p class="guided-selection-count">Seleccionados: <strong>${selected.length}</strong> de 2</p>`;
 }
 
 function applyCultureToAdventurer(source, culture, options = {}) {
@@ -303,7 +310,10 @@ function applyCultureToAdventurer(source, culture, options = {}) {
     Object.entries(attributes).forEach(([key, value]) => { result.atributos[key].valor = value; result.atributos[key].tn = baseNO - value; });
     Object.entries(cultureSkillGroups).forEach(([group, groupSkills]) => groupSkills.forEach(skill => { result.habilidades[group][skill].rango = culture.skills[skill]; result.habilidades[group][skill].favorecida = favoredSkills.includes(skill); }));
     Object.keys(result.combate.competencias).forEach(skill => { result.combate.competencias[skill] = 0; });
-    Object.values(options.combatProficiencies || {}).forEach(skill => { if (skill in result.combate.competencias) result.combate.competencias[skill] = 1; });
+    culture.combatProficiencies.forEach(choice => {
+        const skill = options.combatProficiencies?.[choice.id];
+        if (skill in result.combate.competencias) result.combate.competencias[skill] += choice.rank;
+    });
     result.informacionGeneral.culturaHeroica = culture.name;
     result.informacionGeneral.nivelDeVida = culture.standardOfLiving;
     result.informacionGeneral.bendicionCultural = `${culture.blessing.title}: ${culture.blessing.text}`;
@@ -313,7 +323,9 @@ function applyCultureToAdventurer(source, culture, options = {}) {
     result.estadisticas.esperanza.actual = result.estadisticas.esperanza.maxima;
     result.estadisticas.parada = attributes.mente + culture.derivedStats.parryBonus;
     result.desarrollo.virtudes = (culture.virtues || []).map(virtue => `${virtue.title}: ${virtue.text}`).join('\n\n');
-    result.creation = { ...result.creation, version: 1, cultureId: culture.id, attributeRoll: row.roll, favoredSkills, combatProficiencies: options.combatProficiencies || {}, culturalShadowRule: culture.shadowRule, completed: true };
+    const distinctiveFeatures = options.distinctiveFeatures || [];
+    result.rasgosDistintivos = [...distinctiveFeatures];
+    result.creation = { ...result.creation, version: 1, cultureId: culture.id, attributeRoll: row.roll, favoredSkills, combatProficiencies: options.combatProficiencies || {}, distinctiveFeatures: [...distinctiveFeatures], culturalShadowRule: culture.shadowRule, completed: true };
     return result;
 }
 
@@ -328,7 +340,7 @@ function renderGuidedStep() {
         {
             title: 'Datos del aventurero',
             subtitle: 'Completa los valores de la primera sección de la ficha.',
-            content: `<div class="guided-fields-grid">${guidedField('informacionGeneral.nombre', 'Nombre', 'text', 'aria-required="true" placeholder="Nombre del aventurero"')}<label class="guided-field">Ocupación<select class="form-select tor-select" data-guided-path="informacionGeneral.ocupacion" aria-required="true"><option value="">Selecciona una ocupación…</option>${guidedSelectOptions(guidedOccupations)}</select></label>${guidedField('informacionGeneral.edad', 'Edad', 'number', 'min="0"')}${guidedField('informacionGeneral.heredero', 'Heredero')}${guidedField('sombra.defectos', 'Defectos', 'text', 'placeholder="Separados por comas"')}${guidedField('rasgosDistintivos', 'Rasgos distintivos', 'text', 'placeholder="Separados por comas"')}</div><div class="guided-calculated-note"><i class="fa-solid fa-wand-magic-sparkles me-1"></i> La cultura, el nivel de vida y la bendición se aplicarán en los pasos siguientes.</div>`
+            content: `<div class="guided-fields-grid">${guidedField('informacionGeneral.nombre', 'Nombre', 'text', 'aria-required="true" placeholder="Nombre del aventurero"')}<label class="guided-field">Ocupación<select class="form-select tor-select" data-guided-path="informacionGeneral.ocupacion" aria-required="true"><option value="">Selecciona una ocupación…</option>${guidedSelectOptions(guidedOccupations)}</select></label>${guidedField('informacionGeneral.edad', 'Edad', 'number', 'min="0"')}${guidedField('informacionGeneral.heredero', 'Heredero')}${guidedField('sombra.defectos', 'Defectos', 'text', 'placeholder="Separados por comas"')}</div><div class="guided-calculated-note"><i class="fa-solid fa-wand-magic-sparkles me-1"></i> La cultura, el nivel de vida, la bendición y los rasgos distintivos se aplicarán en los pasos siguientes.</div>`
         },
         {
             title: 'Elige una cultura',
@@ -351,9 +363,14 @@ function renderGuidedStep() {
             content: renderCombatChoices(culture)
         },
         {
+            title: 'Rasgos distintivos',
+            subtitle: 'Elige dos rasgos disponibles para la cultura.',
+            content: renderTraitChoices(culture)
+        },
+        {
             title: 'Confirmar creación',
             subtitle: 'Comprueba las elecciones antes de aplicar la cultura.',
-            content: `<div class="guided-summary"><div class="guided-summary-icon"><i class="fa-solid fa-scroll"></i></div><p>Se aplicará <strong>${escapeHtml(culture?.name || 'la cultura seleccionada')}</strong> a la ficha y todos los campos seguirán siendo editables.</p><div class="guided-summary-grid"><span>Fila de atributos</span><strong>${guidedDraft.attributeRoll || 'Pendiente'}</strong><span>Habilidades favorecidas</span><strong>${guidedDraft.favoredSkills.map(displayName).join(', ') || 'Ninguna'}</strong><span>Número objetivo</span><strong>Base ${adventurer.trancos ? 18 : 20}</strong></div></div>`
+            content: `<div class="guided-summary"><div class="guided-summary-icon"><i class="fa-solid fa-scroll"></i></div><p>Se aplicará <strong>${escapeHtml(culture?.name || 'la cultura seleccionada')}</strong> a la ficha y todos los campos seguirán siendo editables.</p><div class="guided-summary-grid"><span>Fila de atributos</span><strong>${guidedDraft.attributeRoll || 'Pendiente'}</strong><span>Habilidades favorecidas</span><strong>${guidedDraft.favoredSkills.map(displayName).join(', ') || 'Ninguna'}</strong><span>Rasgos distintivos</span><strong>${guidedDraft.distinctiveFeatures.join(', ') || 'Pendientes'}</strong><span>Número objetivo</span><strong>Base ${adventurer.trancos ? 18 : 20}</strong></div></div>`
         }
     ];
     const current = steps[guidedStep];
@@ -392,9 +409,10 @@ function updateGuidedValue(input) {
 }
 
 function validateGuidedStep() {
-    if (guidedStep === 0 || guidedStep === 4 || guidedStep === 5 || guidedStep === 6) return true;
+    if (guidedStep === 0 || guidedStep === 4 || guidedStep === 5 || guidedStep === 7) return true;
     if (guidedStep === 2 && !guidedDraft.cultureId) return false;
     if (guidedStep === 3 && !guidedDraft.attributeRoll) return false;
+    if (guidedStep === 6 && guidedDraft.distinctiveFeatures.length !== 2) return false;
     const invalid = [...guidedStepContent.querySelectorAll('[aria-required="true"]')].find(input => !String(input.value).trim());
     if (!invalid) return true;
     invalid.focus();
@@ -421,7 +439,7 @@ function completeGuidedCreation() {
 
 async function guideNewAdventurer() {
     await loadCultures();
-    guidedDraft = { cultureId: adventurer.creation?.cultureId || '', attributeRoll: adventurer.creation?.attributeRoll || null, favoredSkills: [...(adventurer.creation?.favoredSkills || [])], combatProficiencies: { ...(adventurer.creation?.combatProficiencies || {}) } };
+    guidedDraft = { cultureId: adventurer.creation?.cultureId || '', attributeRoll: adventurer.creation?.attributeRoll || null, favoredSkills: [...(adventurer.creation?.favoredSkills || [])], combatProficiencies: { ...(adventurer.creation?.combatProficiencies || {}) }, distinctiveFeatures: [...(adventurer.creation?.distinctiveFeatures || adventurer.rasgosDistintivos || [])] };
     guidedStep = 0;
     renderGuidedStep();
     if (guidedModal) guidedModal.show();
@@ -435,12 +453,20 @@ guidedForm.addEventListener('change', event => {
         guidedDraft.attributeRoll = null;
         guidedDraft.favoredSkills = [];
         guidedDraft.combatProficiencies = {};
+        guidedDraft.distinctiveFeatures = [];
         renderGuidedStep();
         return;
     }
     if (input.matches('[data-guided-attribute]')) { guidedDraft.attributeRoll = Number(input.value); renderGuidedStep(); return; }
     if (input.matches('[data-guided-favored]')) { guidedDraft.favoredSkills = [...guidedStepContent.querySelectorAll('[data-guided-favored]:checked')].map(item => item.dataset.guidedFavored); return; }
     if (input.matches('[data-guided-combat]')) { guidedDraft.combatProficiencies[input.dataset.guidedCombat] = input.value; return; }
+    if (input.matches('[data-guided-trait]')) {
+        const selectedInputs = [...guidedStepContent.querySelectorAll('[data-guided-trait]:checked')];
+        if (selectedInputs.length > 2) input.checked = false;
+        guidedDraft.distinctiveFeatures = [...guidedStepContent.querySelectorAll('[data-guided-trait]:checked')].map(item => item.dataset.guidedTrait);
+        renderGuidedStep();
+        return;
+    }
     updateGuidedValue(input);
 });
 guidedForm.addEventListener('click', event => {

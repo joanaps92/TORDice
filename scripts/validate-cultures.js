@@ -15,7 +15,8 @@ for (const culture of cultures) {
     if (!Array.isArray(culture.attributesTable) || culture.attributesTable.length !== 6) errors.push(`Tabla de atributos inválida: ${culture.id}`);
     if (!culture.derivedStats || !['enduranceBonus', 'hopeBonus', 'parryBonus'].every(key => Number.isInteger(culture.derivedStats[key]))) errors.push(`Bonificadores derivados inválidos: ${culture.id}`);
     if (!culture.skills || skills.some(skill => !Number.isInteger(culture.skills[skill]))) errors.push(`Habilidades incompletas: ${culture.id}`);
-    if (!Array.isArray(culture.favoredSkillsChoices) || !Array.isArray(culture.combatProficiencies)) errors.push(`Elecciones inválidas: ${culture.id}`);
+    if (!Array.isArray(culture.favoredSkillsChoices) || !Array.isArray(culture.combatProficiencies) || culture.combatProficiencies.some(choice => !Number.isInteger(choice.rank) || !Array.isArray(choice.options))) errors.push(`Elecciones inválidas: ${culture.id}`);
+    if (!Array.isArray(culture.distinctiveFeatures) || culture.distinctiveFeatures.length < 2) errors.push(`Rasgos distintivos incompletos: ${culture.id}`);
 }
 
 if (errors.length) {

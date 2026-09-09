@@ -10,8 +10,8 @@
     "derivedStats": { "enduranceBonus": 20, "hopeBonus": 8, "parryBonus": 12 },
     "skills": { "alentar": 1, "atletismo": 2, "alerta": 2, "explorar": 0, "cantar": 2, "cortesia": 0, "cazar": 0, "viajar": 0, "perspicacia": 0, "curar": 1, "impresionar": 2, "guerrear": 0, "persuadir": 0, "sigilo": 3, "inspeccionar": 0, "acertijos": 0, "saber": 3, "oficio": 2 },
     "favoredSkillsChoices": ["cantar", "saber"],
-    "combatProficiencies": [{ "id": "principal", "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "label": "Arcos o lanzas", "options": ["arcos", "lanzas"] }],
-    "virtues": [], "distinctiveFeatures": [], "languagesAndNames": { "languages": "Lengua Común y Sindarin.", "maleNames": [], "femaleNames": [] }
+    "combatProficiencies": [{ "id": "principal", "rank": 1, "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "rank": 2, "label": "Arcos o lanzas", "options": ["arcos", "lanzas"] }],
+    "virtues": [], "distinctiveFeatures": ["Alegre", "Buena vista", "Hermoso", "Paciente", "Precavido", "Rápido", "Señorial", "Sutil"], "languagesAndNames": { "languages": "Lengua Común y Sindarin.", "maleNames": [], "femaleNames": [] }
   },
   {
     "id": "enanos-durin",
@@ -24,8 +24,8 @@
     "derivedStats": { "enduranceBonus": 22, "hopeBonus": 8, "parryBonus": 10 },
     "skills": { "alentar": 0, "atletismo": 1, "alerta": 0, "explorar": 2, "cantar": 1, "cortesia": 1, "cazar": 0, "viajar": 3, "perspicacia": 0, "curar": 0, "impresionar": 2, "guerrear": 1, "persuadir": 0, "sigilo": 0, "inspeccionar": 3, "acertijos": 2, "saber": 1, "oficio": 2 },
     "favoredSkillsChoices": ["viajar", "oficio"],
-    "combatProficiencies": [{ "id": "principal", "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "label": "Hachas o espadas", "options": ["hachas", "espadas"] }],
-    "virtues": [], "distinctiveFeatures": [], "languagesAndNames": { "languages": "Lengua Común y Khuzdul (lengua secreta).", "maleNames": [], "femaleNames": [] }
+    "combatProficiencies": [{ "id": "principal", "rank": 1, "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "rank": 2, "label": "Hachas o espadas", "options": ["hachas", "espadas"] }],
+    "virtues": [], "distinctiveFeatures": ["Astuto", "Fiero", "Orgulloso", "Precavido", "Reservado", "Señorial", "Severo", "Terco"], "languagesAndNames": { "languages": "Lengua Común y Khuzdul (lengua secreta).", "maleNames": [], "femaleNames": [] }
   },
   {
     "id": "hobbits-comarca",
@@ -38,8 +38,8 @@
     "derivedStats": { "enduranceBonus": 18, "hopeBonus": 10, "parryBonus": 12 },
     "skills": { "alentar": 0, "atletismo": 0, "alerta": 2, "explorar": 0, "cantar": 2, "cortesia": 2, "cazar": 0, "viajar": 0, "perspicacia": 2, "curar": 1, "impresionar": 0, "guerrear": 0, "persuadir": 2, "sigilo": 3, "inspeccionar": 0, "acertijos": 3, "saber": 0, "oficio": 1 },
     "favoredSkillsChoices": ["sigilo", "cortesia"],
-    "combatProficiencies": [{ "id": "principal", "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "label": "Arcos o espadas", "options": ["arcos", "espadas"] }],
-    "virtues": [], "distinctiveFeatures": [], "languagesAndNames": { "languages": "Lengua Común.", "maleNames": [], "femaleNames": [] }
+    "combatProficiencies": [{ "id": "principal", "rank": 1, "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "rank": 2, "label": "Arcos o espadas", "options": ["arcos", "espadas"] }],
+    "virtues": [], "distinctiveFeatures": ["Alegre", "Animoso", "Bien hablado", "Buena vista", "Fiel", "Honorable", "Inquisitivo", "Rústico"], "languagesAndNames": { "languages": "Lengua Común.", "maleNames": [], "femaleNames": [] }
   },
   {
     "id": "hombres-bardo",
@@ -52,8 +52,8 @@
     "derivedStats": { "enduranceBonus": 20, "hopeBonus": 8, "parryBonus": 12 },
     "skills": { "alentar": 2, "atletismo": 1, "alerta": 0, "explorar": 1, "cantar": 1, "cortesia": 2, "cazar": 2, "viajar": 1, "perspicacia": 2, "curar": 0, "impresionar": 1, "guerrear": 2, "persuadir": 3, "sigilo": 0, "inspeccionar": 1, "acertijos": 0, "saber": 1, "oficio": 1 },
     "favoredSkillsChoices": ["alentar", "atletismo"],
-    "combatProficiencies": [{ "id": "principal", "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "label": "Arcos o espadas", "options": ["arcos", "espadas"] }],
-    "virtues": [], "distinctiveFeatures": [], "languagesAndNames": { "languages": "Lengua Común y la lengua de los Hombres del Norte (Vallense).", "maleNames": [], "femaleNames": [] }
+    "combatProficiencies": [{ "id": "principal", "rank": 1, "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "rank": 2, "label": "Arcos o espadas", "options": ["arcos", "espadas"] }],
+    "virtues": [], "distinctiveFeatures": ["Alto", "Animoso", "Arrojado", "Fiero", "Generoso", "Hermoso", "Orgulloso", "Terco"], "languagesAndNames": { "languages": "Lengua Común y la lengua de los Hombres del Norte (Vallense).", "maleNames": [], "femaleNames": [] }
   },
   {
     "id": "hombres-bree",
@@ -66,8 +66,8 @@
     "derivedStats": { "enduranceBonus": 20, "hopeBonus": 10, "parryBonus": 10 },
     "skills": { "alentar": 2, "atletismo": 1, "alerta": 1, "explorar": 1, "cantar": 1, "cortesia": 3, "cazar": 1, "viajar": 1, "perspicacia": 2, "curar": 0, "impresionar": 0, "guerrear": 0, "persuadir": 2, "sigilo": 1, "inspeccionar": 1, "acertijos": 2, "saber": 0, "oficio": 2 },
     "favoredSkillsChoices": ["acertijos", "perspicacia"],
-    "combatProficiencies": [{ "id": "principal", "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "label": "Hachas o lanzas", "options": ["hachas", "lanzas"] }],
-    "virtues": [], "distinctiveFeatures": [], "languagesAndNames": { "languages": "Lengua Común.", "maleNames": [], "femaleNames": [] }
+    "combatProficiencies": [{ "id": "principal", "rank": 1, "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "rank": 2, "label": "Hachas o lanzas", "options": ["hachas", "lanzas"] }],
+    "virtues": [], "distinctiveFeatures": ["Astuto", "Bien hablado", "Fiel", "Generoso", "Inquisitivo", "Paciente", "Rústico", "Sincero"], "languagesAndNames": { "languages": "Lengua Común.", "maleNames": [], "femaleNames": [] }
   },
   {
     "id": "montaraces-norte",
@@ -80,8 +80,8 @@
     "derivedStats": { "enduranceBonus": 20, "hopeBonus": 6, "parryBonus": 14 },
     "skills": { "alentar": 0, "atletismo": 1, "alerta": 2, "explorar": 2, "cantar": 0, "cortesia": 0, "cazar": 2, "viajar": 2, "perspicacia": 0, "curar": 2, "impresionar": 1, "guerrear": 2, "persuadir": 0, "sigilo": 2, "inspeccionar": 1, "acertijos": 0, "saber": 2, "oficio": 0 },
     "favoredSkillsChoices": ["saber", "cazar"],
-    "combatProficiencies": [{ "id": "principal", "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "label": "Espadas o lanzas", "options": ["espadas", "lanzas"] }],
-    "virtues": [], "distinctiveFeatures": [], "languagesAndNames": { "languages": "Lengua Común y Sindarin.", "maleNames": [], "femaleNames": [] }
+    "combatProficiencies": [{ "id": "principal", "rank": 1, "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "rank": 2, "label": "Espadas o lanzas", "options": ["espadas", "lanzas"] }],
+    "virtues": [], "distinctiveFeatures": ["Alto", "Arrojado", "Honorable", "Rápido", "Reservado", "Severo", "Sincero", "Sutil"], "languagesAndNames": { "languages": "Lengua Común y Sindarin.", "maleNames": [], "femaleNames": [] }
   },
   {
     "id": "elfos-lorien",
@@ -94,8 +94,8 @@
     "derivedStats": { "enduranceBonus": 18, "hopeBonus": 8, "parryBonus": 14 },
     "skills": { "alentar": 0, "atletismo": 2, "alerta": 2, "explorar": 1, "cantar": 2, "cortesia": 0, "cazar": 1, "viajar": 0, "perspicacia": 0, "curar": 1, "impresionar": 1, "guerrear": 1, "persuadir": 0, "sigilo": 3, "inspeccionar": 2, "acertijos": 0, "saber": 2, "oficio": 2 },
     "favoredSkillsChoices": ["alerta", "cantar"],
-    "combatProficiencies": [{ "id": "principal", "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "label": "Arcos o lanzas", "options": ["arcos", "lanzas"] }],
-    "virtues": [{ "title": "Contra lo invisible", "text": "Percibes a las criaturas del mundo de los espectros." }, { "title": "Disparos en la oscuridad", "text": "Si estás en un bosque o es de noche, estás Inspirado en tus tiradas de combate." }], "distinctiveFeatures": [], "languagesAndNames": { "languages": "Lengua Común y Sindarin.", "maleNames": [], "femaleNames": [] }
+    "combatProficiencies": [{ "id": "principal", "rank": 1, "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "rank": 2, "label": "Arcos o lanzas", "options": ["arcos", "lanzas"] }],
+    "virtues": [{ "title": "Contra lo invisible", "text": "Percibes a las criaturas del mundo de los espectros." }, { "title": "Disparos en la oscuridad", "text": "Si estás en un bosque o es de noche, estás Inspirado en tus tiradas de combate." }], "distinctiveFeatures": ["Alegre", "Astuto", "Buena vista", "Hermoso", "Orgulloso", "Precavido", "Rápido", "Reservado"], "languagesAndNames": { "languages": "Lengua Común y Sindarin.", "maleNames": [], "femaleNames": [] }
   },
   {
     "id": "elfos-rivendel",
@@ -108,8 +108,8 @@
     "derivedStats": { "enduranceBonus": 22, "hopeBonus": 6, "parryBonus": 12 },
     "skills": { "alentar": 0, "atletismo": 2, "alerta": 2, "explorar": 0, "cantar": 2, "cortesia": 1, "cazar": 0, "viajar": 1, "perspicacia": 0, "curar": 2, "impresionar": 2, "guerrear": 2, "persuadir": 0, "sigilo": 0, "inspeccionar": 0, "acertijos": 0, "saber": 3, "oficio": 2 },
     "favoredSkillsChoices": ["alerta", "saber"],
-    "combatProficiencies": [{ "id": "principal", "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "label": "Lanzas o espadas", "options": ["lanzas", "espadas"] }],
-    "virtues": [{ "title": "Artífice de Eregion", "text": "Puedes estudiar objetos extraordinarios y crear recompensas encantadas élficas." }, { "title": "Belleza de las estrellas", "text": "Aumenta en 1 tu Esperanza máxima." }], "distinctiveFeatures": [], "languagesAndNames": { "languages": "Lengua Común, Sindarin y Quenya.", "maleNames": [], "femaleNames": [] }
+    "combatProficiencies": [{ "id": "principal", "rank": 1, "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "rank": 2, "label": "Lanzas o espadas", "options": ["lanzas", "espadas"] }],
+    "virtues": [{ "title": "Artífice de Eregion", "text": "Puedes estudiar objetos extraordinarios y crear recompensas encantadas élficas." }, { "title": "Belleza de las estrellas", "text": "Aumenta en 1 tu Esperanza máxima." }], "distinctiveFeatures": ["Alegre", "Buena vista", "Hermoso", "Inquisitivo", "Orgulloso", "Señorial", "Sutil", "Terco"], "languagesAndNames": { "languages": "Lengua Común, Sindarin y Quenya.", "maleNames": [], "femaleNames": [] }
   },
   {
     "id": "enanos-nogrod-belegost",
@@ -122,7 +122,7 @@
     "derivedStats": { "enduranceBonus": 22, "hopeBonus": 8, "parryBonus": 10 },
     "skills": { "alentar": 0, "atletismo": 1, "alerta": 0, "explorar": 2, "cantar": 1, "cortesia": 0, "cazar": 0, "viajar": 2, "perspicacia": 0, "curar": 0, "impresionar": 2, "guerrear": 0, "persuadir": 0, "sigilo": 0, "inspeccionar": 3, "acertijos": 2, "saber": 2, "oficio": 3 },
     "favoredSkillsChoices": ["impresionar", "oficio"],
-    "combatProficiencies": [{ "id": "principal", "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "label": "Hachas o espadas", "options": ["hachas", "espadas"] }],
-    "virtues": [{ "title": "Fuego antiguo", "text": "Aumenta tu Aguante máximo en 1 punto y reduce pérdidas por frío, fuego y veneno." }, { "title": "Secretos de Telchar", "text": "Puedes añadir una recompensa encantada de manufactura enana o crear un artefacto maravilloso." }], "distinctiveFeatures": [], "languagesAndNames": { "languages": "Lengua Común y lengua enana.", "maleNames": [], "femaleNames": [] }
+    "combatProficiencies": [{ "id": "principal", "rank": 1, "label": "Una competencia de combate a elegir", "options": ["hachas", "arcos", "lanzas", "espadas"] }, { "id": "secundaria", "rank": 2, "label": "Hachas o espadas", "options": ["hachas", "espadas"] }],
+    "virtues": [{ "title": "Fuego antiguo", "text": "Aumenta tu Aguante máximo en 1 punto y reduce pérdidas por frío, fuego y veneno." }, { "title": "Secretos de Telchar", "text": "Puedes añadir una recompensa encantada de manufactura enana o crear un artefacto maravilloso." }], "distinctiveFeatures": ["Astuto", "Fiero", "Orgulloso", "Precavido", "Reservado", "Rústico", "Severo", "Terco"], "languagesAndNames": { "languages": "Lengua Común y lengua enana.", "maleNames": [], "femaleNames": [] }
   }
 ]
