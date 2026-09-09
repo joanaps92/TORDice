@@ -210,10 +210,10 @@
                     <button type="button" class="btn-close" id="guided-close-btn" aria-label="Salir de la guía"></button>
                 </div>
                 <div class="guided-progress px-4">
-                    <div class="progress" role="progressbar" aria-label="Progreso de la guía" aria-valuemin="1" aria-valuemax="8" aria-valuenow="1">
+                    <div class="progress" role="progressbar" aria-label="Progreso de la guía" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1">
                         <div class="progress-bar" id="guided-progress-bar"></div>
                     </div>
-                    <span class="guided-progress-label" id="guided-progress-label">Paso 1 de 8</span>
+                    <span class="guided-progress-label" id="guided-progress-label">Paso 1 de 10</span>
                 </div>
                 <form id="guided-adventurer-form">
                     <div class="modal-body pt-4" id="guided-step-content"></div>
@@ -658,6 +658,7 @@
                         <label>Camino de la sombra<input data-path="sombra.senda" title="Valor sugerido: puedes editarlo"></label>
                         <label>Defectos<input data-path="sombra.defectos" data-list="true" placeholder="Separados por comas"></label>
                         <label class="wide">Rasgos distintivos<input data-path="rasgosDistintivos" data-list="true" placeholder="Separados por comas"></label>
+                        <div id="trancos-rule-note" class="trancos-rule-note d-none" role="status"><i class="fa-solid fa-compass"></i><div><strong>Rasgo distintivo: Trancos</strong><p>Mientras viajas, se considera Inspirado en las tiradas de habilidad.</p></div></div>
                     </div>
                 </section>
 
@@ -672,7 +673,7 @@
                     <section class="sheet-panel compact-panel">
                         <h2>Estados y sombra</h2>
                         <div class="state-list"><label><input type="checkbox" data-path="estados.cansado"> Cansado</label><label><input type="checkbox" data-path="estados.desanimado"> Desanimado</label><label><input type="checkbox" data-path="estados.herido"> Herido</label></div>
-                        <div class="stat-grid"><label>Días de herida<input type="number" min="0" data-path="estados.diasDeHerida"></label><label>Puntos de sombra<input type="number" min="0" data-path="sombra.puntos"></label><label>Cicatrices de la sombra<input type="number" min="0" data-path="sombra.cicatrices"></label><label title="Valor base editable">Aguante máximo<input type="number" min="0" data-path="estadisticas.aguante.maximo"></label><label>Aguante actual<input type="number" min="0" data-path="estadisticas.aguante.actual"></label><label title="Valor base editable">Esperanza máxima<input type="number" min="0" data-path="estadisticas.esperanza.maxima"></label><label>Esperanza actual<input type="number" min="0" data-path="estadisticas.esperanza.actual"></label><label title="Valor base editable">Parada<input type="number" min="0" data-path="estadisticas.parada"></label><label>Fatiga<input type="number" min="0" data-path="estadisticas.fatiga"></label><label class="wide">Lesiones<textarea data-path="estados.lesiones" rows="3"></textarea></label></div>
+                        <div class="stat-grid"><label>Días de herida<input type="number" min="0" data-path="estados.diasDeHerida"></label><label>Puntos de sombra<input type="number" min="0" data-path="sombra.puntos"></label><label>Cicatrices de la sombra<input type="number" min="0" data-path="sombra.cicatrices"></label><label title="Valor base editable">Aguante máximo<input type="number" min="0" data-path="estadisticas.aguante.maximo"></label><label>Aguante actual<input type="number" min="0" data-path="estadisticas.aguante.actual"></label><label title="Valor base editable">Esperanza máxima<input type="number" min="0" data-path="estadisticas.esperanza.maxima"></label><label>Esperanza actual<input type="number" min="0" data-path="estadisticas.esperanza.actual"></label><label title="Valor base editable">Parada<input type="number" min="0" data-path="estadisticas.parada"><small id="parry-modifier-note" class="stat-help"></small></label><label>Fatiga<input type="number" min="0" data-path="estadisticas.fatiga"></label><label class="wide">Lesiones<textarea data-path="estados.lesiones" rows="3"></textarea></label></div>
                     </section>
                     <section class="sheet-panel compact-panel">
                         <h2>Compañía</h2>

@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "validate:cultures": "node scripts/validate-cultures.js",
-    "validate:occupations": "node scripts/validate-occupations.js"
+    "validate:occupations": "node scripts/validate-occupations.js",
+    "validate:equipment": "node scripts/validate-equipment.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

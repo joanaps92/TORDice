@@ -125,6 +125,8 @@ let cultures = [];
 let culturesPromise = null;
 let occupations = [];
 let occupationsPromise = null;
+let equipmentCatalog = { weapons: [], armor: [], shields: [], helmets: [] };
+let equipmentPromise = null;
 const cultureSkillGroups = {
     fuerza: ['impresionar', 'atletismo', 'alerta', 'cazar', 'cantar', 'oficio'],
     corazon: ['alentar', 'viajar', 'perspicacia', 'curar', 'cortesia', 'guerrear'],
@@ -151,6 +153,15 @@ async function loadOccupations() {
         .then(data => { occupations = data; return occupations; })
         .catch(error => { console.error(error); occupations = []; return occupations; });
     return occupationsPromise;
+}
+
+async function loadEquipmentCatalog() {
+    if (equipmentPromise) return equipmentPromise;
+    equipmentPromise = fetch('/data/equipo-guerra.json')
+        .then(response => { if (!response.ok) throw new Error('No se pudo cargar el equipo de guerra'); return response.json(); })
+        .then(data => { equipmentCatalog = data; return equipmentCatalog; })
+        .catch(error => { console.error(error); return equipmentCatalog; });
+    return equipmentPromise;
 }
 
 function renderCultureSelectors() {
@@ -181,6 +192,8 @@ const saveAdventurerBtn = document.getElementById('save-adventurer-btn');
 const sheetLibrarySelect = document.getElementById('sheet-library-select');
 const adventurerSelect = document.getElementById('adventurer-select');
 const ADVENTURER_KEY = 'tor_adventurer_draft';
+const TRANCOS_FEATURE = 'Trancos';
+const TRANCOS_FEATURE_DESCRIPTION = 'Mientras viajas, se considera Inspirado en las tiradas de habilidad.';
 const calculatedEditablePaths = new Set([
     'atributos.fuerza.tn', 'atributos.corazon.tn', 'atributos.mente.tn',
     'estadisticas.aguante.maximo', 'estadisticas.aguante.actual',
@@ -192,7 +205,7 @@ let calculatedOverrides = new Set();
 const newAdventurer = () => ({
     _id: null,
     trancos: false,
-    creation: { version: 1, cultureId: '', attributeRoll: null, favoredSkills: [], occupationFavoredSkills: [], combatProficiencies: {}, distinctiveFeatures: [], occupationDistinctiveFeature: '', completed: false },
+    creation: { version: 1, cultureId: '', attributeRoll: null, favoredSkills: [], occupationFavoredSkills: [], combatProficiencies: {}, additionalRanks: { skills: {}, combat: {} }, advancementPointsSpent: 0, equipment: { weapons: {}, armor: '', shield: '', helmet: '' }, distinctiveFeatures: [], occupationDistinctiveFeature: '', completed: false },
     informacionGeneral: { nombre: '', culturaHeroica: '', ocupacion: '', nivelDeVida: '', edad: 0, bendicionCultural: '', heredero: '' },
     atributos: { fuerza: { valor: 0, tn: 20 }, corazon: { valor: 0, tn: 20 }, mente: { valor: 0, tn: 20 } },
     estadisticas: { aguante: { maximo: 0, actual: 0 }, esperanza: { maxima: 0, actual: 0 }, parada: 0, cargaTotal: 0, fatiga: 0 },
@@ -200,8 +213,8 @@ const newAdventurer = () => ({
     sombra: { puntos: 0, cicatrices: 0, senda: '', defectos: [] },
     desarrollo: { valor: 1, sabiduria: 1, puntosHabilidad: 0, puntosAventura: 0, virtudes: '', recompensas: '' },
     habilidades: { fuerza: { impresionar: { rango: 0, favorecida: false }, atletismo: { rango: 0, favorecida: false }, alerta: { rango: 0, favorecida: false }, cazar: { rango: 0, favorecida: false }, cantar: { rango: 0, favorecida: false }, oficio: { rango: 0, favorecida: false } }, corazon: { alentar: { rango: 0, favorecida: false }, viajar: { rango: 0, favorecida: false }, perspicacia: { rango: 0, favorecida: false }, curar: { rango: 0, favorecida: false }, cortesia: { rango: 0, favorecida: false }, guerrear: { rango: 0, favorecida: false } }, mente: { persuadir: { rango: 0, favorecida: false }, sigilo: { rango: 0, favorecida: false }, inspeccionar: { rango: 0, favorecida: false }, explorar: { rango: 0, favorecida: false }, acertijos: { rango: 0, favorecida: false }, saber: { rango: 0, favorecida: false } } },
-    combate: { competencias: { hachas: 0, arcos: 0, lanzas: 0, espadas: 0 }, equipoGuerra: [{ item: { tipoItem: '', nombre: '', subtipoItem: '', dano: 0, herida: 0, carga: 0, competencia: '', notas: '' } }] },
-    rasgosDistintivos: [], inventario: { objetosUtiles: [], equipoViaje: '', riqueza: 0 }, compania: { vinculoComunidad: '', puntuacionComunidad: 0, refugio: '' }
+    combate: { competencias: { hachas: 0, arcos: 0, lanzas: 0, espadas: 0 }, equipoGuerra: [{ item: { tipoItem: '', nombre: '', subtipoItem: '', dano: 0, herida: '', carga: 0, competencia: '', notas: '', modificadorParada: 0 } }] },
+    rasgosDistintivos: [], reglasEspeciales: [], inventario: { objetosUtiles: [], equipoViaje: '', riqueza: 0 }, compania: { vinculoComunidad: '', puntuacionComunidad: 0, refugio: '' }
 });
 let adventurer = newAdventurer();
 let adventurerId = null;
@@ -209,16 +222,21 @@ let savedAdventurers = [];
 let assignedAdventurerId = localStorage.getItem('tor_assigned_adventurer') || '';
 const getAt = (obj, path) => path.split('.').reduce((value, key) => value?.[key], obj);
 const setAt = (obj, path, value) => { const parts = path.split('.'); const key = parts.pop(); const target = parts.reduce((value, part) => value[part], obj); target[key] = value; };
-const newWarGearItem = () => ({ item: { tipoItem: '', nombre: '', subtipoItem: '', dano: 0, herida: 0, carga: 0, competencia: '', notas: '' } });
+const newWarGearItem = () => ({ item: { tipoItem: '', nombre: '', subtipoItem: '', dano: 0, herida: '', carga: 0, competencia: '', notas: '', modificadorParada: 0 } });
 const displayName = key => ({ fuerza: 'Fuerza', corazon: 'Corazón', mente: 'Mente', impresionar: 'Impresionar', atletismo: 'Atletismo', alerta: 'Alerta', cazar: 'Cazar', cantar: 'Cantar', oficio: 'Oficio', alentar: 'Alentar', viajar: 'Viajar', perspicacia: 'Perspicacia', curar: 'Curar', cortesia: 'Cortesía', guerrear: 'Guerrear', persuadir: 'Persuadir', sigilo: 'Sigilo', inspeccionar: 'Inspeccionar', explorar: 'Explorar', acertijos: 'Acertijos', saber: 'Saber', hachas: 'Hachas', arcos: 'Arcos', lanzas: 'Lanzas', espadas: 'Espadas' }[key] || key);
 
 function renderSheetDynamicFields() {
     attributePanels.innerHTML = Object.entries(adventurer.habilidades).map(([attribute, skills]) => `<section class="attribute-panel"><h2 class="attribute-title">${displayName(attribute)}</h2><div class="attribute-stats"><label class="attribute-inline">Valor<input type="number" min="0" data-path="atributos.${attribute}.valor"></label><label class="attribute-inline" title="Valor base editable">NO<input type="number" min="0" data-path="atributos.${attribute}.tn" aria-label="Número objetivo"></label></div>${Object.keys(skills).map(skill => `<div class="skill-row"><span>${displayName(skill)}</span><input type="number" min="0" data-path="habilidades.${attribute}.${skill}.rango" aria-label="Rango de ${displayName(skill)}"><label title="Habilidad favorecida"><input type="checkbox" data-path="habilidades.${attribute}.${skill}.favorecida"> Fav.</label></div>`).join('')}</section>`).join('');
     combatSkills.innerHTML = Object.keys(adventurer.combate.competencias).map(skill => `<label>${displayName(skill)}<input type="number" min="0" data-path="combate.competencias.${skill}"></label>`).join('');
     if (!adventurer.combate.equipoGuerra.length) adventurer.combate.equipoGuerra.push(newWarGearItem());
-    warGearList.innerHTML = adventurer.combate.equipoGuerra.map((_, index) => `<div class="war-gear-entry"><div class="d-flex justify-content-between align-items-center mb-2"><span class="war-gear-title">Equipo ${index + 1}</span><button class="btn btn-link text-danger p-0 remove-war-gear-btn" type="button" data-gear-index="${index}" title="Eliminar equipo"><i class="fa-solid fa-trash-can"></i></button></div><div class="equipment-grid"><label>Nombre<input data-path="combate.equipoGuerra.${index}.item.nombre"></label><label>Tipo<input data-path="combate.equipoGuerra.${index}.item.tipoItem"></label><label>Subtipo<input data-path="combate.equipoGuerra.${index}.item.subtipoItem"></label><label>Competencia<input data-path="combate.equipoGuerra.${index}.item.competencia"></label><label>Daño<input type="number" min="0" data-path="combate.equipoGuerra.${index}.item.dano"></label><label>Herida<input type="number" min="0" data-path="combate.equipoGuerra.${index}.item.herida"></label><label>Carga<input type="number" min="0" data-path="combate.equipoGuerra.${index}.item.carga"></label><label class="wide">Notas<input data-path="combate.equipoGuerra.${index}.item.notas"></label></div></div>`).join('');
+    warGearList.innerHTML = adventurer.combate.equipoGuerra.map((_, index) => `<div class="war-gear-entry"><div class="d-flex justify-content-between align-items-center mb-2"><span class="war-gear-title">Equipo ${index + 1}</span><button class="btn btn-link text-danger p-0 remove-war-gear-btn" type="button" data-gear-index="${index}" title="Eliminar equipo"><i class="fa-solid fa-trash-can"></i></button></div><div class="equipment-grid"><label>Nombre<input data-path="combate.equipoGuerra.${index}.item.nombre"></label><label>Tipo<input data-path="combate.equipoGuerra.${index}.item.tipoItem"></label><label>Subtipo<input data-path="combate.equipoGuerra.${index}.item.subtipoItem"></label><label>Competencia<input data-path="combate.equipoGuerra.${index}.item.competencia"></label><label>Daño<input type="number" min="0" data-path="combate.equipoGuerra.${index}.item.dano"></label><label>Herida<input data-path="combate.equipoGuerra.${index}.item.herida"></label><label>Carga<input type="number" min="0" data-path="combate.equipoGuerra.${index}.item.carga"></label><label class="wide">Notas<input data-path="combate.equipoGuerra.${index}.item.notas"></label></div></div>`).join('');
 }
-function fillAdventurerForm() { updateCalculatedFields(); renderSheetDynamicFields(); renderCultureSelectors(); adventurerForm.querySelectorAll('[data-path]').forEach(input => { const value = input.dataset.cultureSelect ? (adventurer.creation?.cultureId || getCultureByName(adventurer.informacionGeneral.culturaHeroica)?.id || '') : getAt(adventurer, input.dataset.path); input.checked = input.type === 'checkbox' && Boolean(value); input.value = input.dataset.list ? (Array.isArray(value) ? value.join(', ') : (value ?? '')) : (input.type === 'checkbox' ? '' : (value ?? '')); }); }
+function syncTrancosRuleNotice() {
+    const notice = document.getElementById('trancos-rule-note');
+    if (!notice) return;
+    notice.classList.toggle('d-none', !adventurer.trancos);
+}
+function fillAdventurerForm() { updateCalculatedFields(); renderSheetDynamicFields(); renderCultureSelectors(); adventurerForm.querySelectorAll('[data-path]').forEach(input => { const value = input.dataset.cultureSelect ? (adventurer.creation?.cultureId || getCultureByName(adventurer.informacionGeneral.culturaHeroica)?.id || '') : getAt(adventurer, input.dataset.path); input.checked = input.type === 'checkbox' && Boolean(value); input.value = input.dataset.list ? (Array.isArray(value) ? value.join(', ') : (value ?? '')) : (input.type === 'checkbox' ? '' : (value ?? '')); }); syncTrancosRuleNotice(); }
 function saveAdventurer() { localStorage.setItem(ADVENTURER_KEY, JSON.stringify(adventurer)); const status = document.getElementById('adventurer-save-status'); if (status) status.textContent = 'Borrador guardado en este dispositivo. Pulsa Guardar para sincronizarlo.'; }
 function normalizeAdventurerSheet(sheet, trancos = false) {
     const base = newAdventurer();
@@ -233,6 +251,7 @@ function shadowPathForOccupation() {
     const fallback = { 'Buscador de tesoros': 'Mal del dragón', 'Campeón': 'Maldición de la venganza', 'Capitán': 'Atracción del poder', 'Erudito': 'Atracción de los secretos', 'Guardián': 'Camino de la desesperación', 'Mensajero': 'Locura del trotamundos' };
     return getOccupationByName(adventurer.informacionGeneral.ocupacion)?.shadowPath || fallback[adventurer.informacionGeneral.ocupacion] || '';
 }
+function currentShieldParryModifier() { return (adventurer.combate?.equipoGuerra || []).reduce((total, gear) => total + Number(gear.item?.modificadorParada || 0), 0); }
 function updateCalculatedFields() {
     const attributeTarget = adventurer.trancos ? 18 : 20;
     Object.entries(adventurer.atributos || {}).forEach(([attributeName, attribute]) => {
@@ -242,13 +261,21 @@ function updateCalculatedFields() {
     if (!calculatedOverrides.has('estadisticas.cargaTotal')) {
         adventurer.estadisticas.cargaTotal = (adventurer.combate?.equipoGuerra || []).reduce((total, gear) => total + Number(gear.item?.carga || 0), 0);
     }
+    if (!calculatedOverrides.has('estadisticas.parada') && Number.isFinite(Number(adventurer.creation?.baseParry))) {
+        adventurer.estadisticas.parada = Number(adventurer.creation.baseParry) + currentShieldParryModifier();
+    }
     if (!calculatedOverrides.has('sombra.senda')) adventurer.sombra.senda = shadowPathForOccupation();
 }
 function syncCalculatedInputs() {
-    ['atributos.fuerza.tn', 'atributos.corazon.tn', 'atributos.mente.tn', 'estadisticas.cargaTotal'].forEach(path => {
+    ['atributos.fuerza.tn', 'atributos.corazon.tn', 'atributos.mente.tn', 'estadisticas.cargaTotal', 'estadisticas.parada'].forEach(path => {
         const input = adventurerForm.querySelector(`[data-path="${path}"]`);
         if (input) input.value = getAt(adventurer, path) ?? '';
     });
+    const parryNote = document.getElementById('parry-modifier-note');
+    if (parryNote) {
+        const modifier = currentShieldParryModifier();
+        parryNote.textContent = modifier ? `Incluye +${modifier} por escudo` : 'Sin modificador de escudo';
+    }
 }
 function setShadowPathFromOccupation() {
     if (!calculatedOverrides.has('sombra.senda')) adventurer.sombra.senda = shadowPathForOccupation();
@@ -268,10 +295,10 @@ const guidedNextBtn = document.getElementById('guided-next-btn');
 const guidedExitBtn = document.getElementById('guided-exit-btn');
 const guidedCloseBtn = document.getElementById('guided-close-btn');
 let guidedStep = 0;
-const guidedStepCount = 8;
+const guidedStepCount = 10;
 const guidedOccupations = ['Buscador de tesoros', 'Campeón', 'Capitán', 'Erudito', 'Guardián', 'Mensajero'];
 const guidedSelectOptions = options => options.map(option => `<option value="${option}">${option}</option>`).join('');
-let guidedDraft = { cultureId: '', attributeRoll: null, favoredSkills: [], occupationFavoredSkills: [], combatProficiencies: {}, distinctiveFeatures: [], occupationTraitOption: '' };
+let guidedDraft = { cultureId: '', attributeRoll: null, favoredSkills: [], occupationFavoredSkills: [], combatProficiencies: {}, additionalRanks: { skills: {}, combat: {} }, equipment: { weapons: {}, armor: '', shield: '', helmet: '' }, distinctiveFeatures: [], occupationTraitOption: '' };
 
 function guidedField(path, label, type = 'text', extra = '') {
     return `<label class="guided-field">${label}<input class="form-control tor-input" type="${type}" data-guided-path="${path}" ${extra}></label>`;
@@ -312,6 +339,107 @@ function occupationTraitLabel(occupation, option) {
     return option ? `${occupation.distinctiveFeature.name}: ${option}` : occupation.distinctiveFeature.name;
 }
 
+const skillRankCosts = [1, 2, 3, 5];
+const combatRankCosts = [2, 4, 6];
+const guidedCombatSkills = ['hachas', 'arcos', 'lanzas', 'espadas'];
+
+function guidedCombatBaseRanks(culture, selections = guidedDraft.combatProficiencies) {
+    const ranks = Object.fromEntries(guidedCombatSkills.map(skill => [skill, 0]));
+    (culture?.combatProficiencies || []).forEach(choice => {
+        const skill = selections?.[choice.id];
+        if (skill in ranks) ranks[skill] += choice.rank;
+    });
+    return ranks;
+}
+
+function rankCost(rank, type) {
+    const costs = type === 'combat' ? combatRankCosts : skillRankCosts;
+    return costs[rank - 1] || Infinity;
+}
+
+function additionalCost(startingRank, purchased, type) {
+    let total = 0;
+    for (let index = 1; index <= purchased; index += 1) total += rankCost(startingRank + index, type);
+    return total;
+}
+
+function calculateAdvancementPoints(culture, additionalRanks = guidedDraft.additionalRanks, selections = guidedDraft.combatProficiencies) {
+    const skillPoints = Object.entries(additionalRanks?.skills || {}).reduce((total, [skill, purchased]) => total + additionalCost(culture?.skills?.[skill] || 0, Number(purchased) || 0, 'skill'), 0);
+    const combatBase = guidedCombatBaseRanks(culture, selections);
+    const combatPoints = Object.entries(additionalRanks?.combat || {}).reduce((total, [skill, purchased]) => total + additionalCost(combatBase[skill] || 0, Number(purchased) || 0, 'combat'), 0);
+    return skillPoints + combatPoints;
+}
+
+function guidedAdvancementBudget() { return adventurer.trancos ? 15 : 10; }
+
+function renderPurchaseRow(type, skill, baseRank, purchased, spent, budget) {
+    const maxRank = type === 'combat' ? combatRankCosts.length : skillRankCosts.length;
+    const totalRank = baseRank + purchased;
+    const nextCost = totalRank < maxRank ? rankCost(totalRank + 1, type) : Infinity;
+    const canAdd = totalRank < maxRank && spent + nextCost <= budget;
+    return `<div class="guided-purchase-row"><div><strong>${displayName(skill)}</strong><small>Base ${baseRank} · Coste siguiente: ${Number.isFinite(nextCost) ? `${nextCost} puntos` : 'máximo'}</small></div><button type="button" class="guided-purchase-btn" data-guided-purchase="${type}" data-guided-purchase-key="${skill}" data-guided-purchase-delta="-1" ${purchased ? '' : 'disabled'} aria-label="Reducir ${displayName(skill)}">−</button><strong class="guided-purchase-rank">${totalRank}</strong><button type="button" class="guided-purchase-btn" data-guided-purchase="${type}" data-guided-purchase-key="${skill}" data-guided-purchase-delta="1" ${canAdd ? '' : 'disabled'} aria-label="Aumentar ${displayName(skill)}">+</button></div>`;
+}
+
+function renderAdditionalRanks(culture) {
+    if (!culture) return '<div class="guided-intro"><p>Selecciona primero una cultura.</p></div>';
+    const additionalRanks = guidedDraft.additionalRanks || { skills: {}, combat: {} };
+    const budget = guidedAdvancementBudget();
+    const spent = calculateAdvancementPoints(culture, additionalRanks);
+    const skillRows = Object.entries(cultureSkillGroups).flatMap(([, skills]) => skills).map(skill => renderPurchaseRow('skills', skill, culture.skills[skill], Number(additionalRanks.skills?.[skill] || 0), spent, budget)).join('');
+    const combatBase = guidedCombatBaseRanks(culture);
+    const combatRows = guidedCombatSkills.map(skill => renderPurchaseRow('combat', skill, combatBase[skill], Number(additionalRanks.combat?.[skill] || 0), spent, budget)).join('');
+    return `<div class="guided-intro"><i class="fa-solid fa-coins"></i><p>Tienes <strong>${budget} puntos</strong> para comprar rangos adicionales. Cada nivel se paga por separado y puedes mejorar habilidades o competencias que empiecen en rango 0. Costes: habilidades 1/2/3/5 · combate 2/4/6.</p></div><div class="guided-points-total"><span>Puntos gastados</span><strong>${spent} / ${budget}</strong><span>Disponibles</span><strong>${budget - spent}</strong></div><h6 class="guided-purchase-heading">Habilidades</h6><div class="guided-purchase-grid">${skillRows}</div><h6 class="guided-purchase-heading">Competencias de combate</h6><div class="guided-purchase-grid">${combatRows}</div>`;
+}
+
+function guidedCombatFinalRanks(culture) {
+    const ranks = guidedCombatBaseRanks(culture);
+    Object.entries(guidedDraft.additionalRanks?.combat || {}).forEach(([skill, purchased]) => { if (skill in ranks) ranks[skill] += Number(purchased) || 0; });
+    return ranks;
+}
+
+function equipmentChoiceDetails(item, category) {
+    if (!item) return '';
+    if (category.startsWith('weapon')) return `Daño ${item.damage} · Herida ${item.injury} · Carga ${item.load}${item.notes ? ` · ${item.notes}` : ''}`;
+    if (category === 'armor' || category === 'helmet') return `Protección ${item.protection} · Carga ${item.load}`;
+    return `Modificador de Parada +${item.parryModifier} · Carga ${item.load}`;
+}
+
+function renderEquipmentSelect(label, category, selected, options, required = false) {
+    const emptyLabel = category === 'armor' ? 'Selecciona una armadura…' : category.startsWith('weapon') ? 'Selecciona un arma…' : `Sin ${category === 'shield' ? 'escudo' : 'yelmo'}`;
+    const emptyOption = required ? `<option value="">${emptyLabel}</option>` : `<option value="">${emptyLabel}</option>`;
+    const selectedItem = options.find(item => item.id === selected);
+    return `<label class="guided-field equipment-choice-field">${label}<select class="form-select tor-select" data-guided-equipment="${category}" ${required ? 'aria-required="true"' : ''}>${emptyOption}${options.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === selected ? 'selected' : ''}>${escapeHtml(item.name)}</option>`).join('')}</select>${selectedItem ? `<small class="equipment-choice-details">${escapeHtml(equipmentChoiceDetails(selectedItem, category))}</small>` : ''}</label>`;
+}
+
+function renderEquipmentChoices(culture) {
+    if (!culture || !equipmentCatalog.weapons.length) return '<div class="guided-intro"><p>No se pudo cargar el catálogo de equipo.</p></div>';
+    const equipment = guidedDraft.equipment || { weapons: {}, armor: '', shield: '', helmet: '' };
+    const finalRanks = guidedCombatFinalRanks(culture);
+    const weaponChoices = guidedCombatSkills.filter(skill => finalRanks[skill] > 0).map(skill => {
+        const options = equipmentCatalog.weapons.filter(weapon => weapon.competence === skill);
+        if (!equipment.weapons[skill] && options[0]) equipment.weapons[skill] = options[0].id;
+        return renderEquipmentSelect(`Arma de ${displayName(skill)} (rango ${finalRanks[skill]})`, 'weapon-' + skill, equipment.weapons[skill], options, true);
+    }).join('');
+    const weaponCount = guidedCombatSkills.filter(skill => finalRanks[skill] > 0).length;
+    const weaponFields = weaponChoices || '<p class="guided-empty-equipment">No tienes competencias de armas; puedes continuar sin seleccionar armas.</p>';
+    return `<div class="guided-intro"><i class="fa-solid fa-swords"></i><p>Elige un arma por cada tipo de competencia con rango mayor que 0. Los tipos sin competencia no se recomiendan ni aparecen. La armadura es obligatoria; el escudo y el yelmo son opcionales.</p></div><div class="guided-equipment-section"><h6>Armas (${weaponCount})</h6><div class="guided-fields-grid">${weaponFields}</div></div><div class="guided-equipment-section"><h6>Protección</h6><div class="guided-fields-grid">${renderEquipmentSelect('Armadura', 'armor', equipment.armor, equipmentCatalog.armor, true)}${renderEquipmentSelect('Escudo (opcional)', 'shield', equipment.shield, equipmentCatalog.shields)}${renderEquipmentSelect('Yelmo (opcional)', 'helmet', equipment.helmet, equipmentCatalog.helmets)}</div></div>`;
+}
+
+function selectedEquipmentItems(equipment) {
+    const items = [];
+    Object.entries(equipment?.weapons || {}).forEach(([skill, id]) => {
+        const item = equipmentCatalog.weapons.find(weapon => weapon.id === id);
+        if (item) items.push({ item: { tipoItem: 'Arma', nombre: item.name, subtipoItem: '', dano: item.damage, herida: item.injury, carga: item.load, competencia: displayName(skill), notas: item.notes || '', modificadorParada: 0 } });
+    });
+    const armor = equipmentCatalog.armor.find(item => item.id === equipment?.armor);
+    if (armor) items.push({ item: { tipoItem: 'Armadura', nombre: armor.name, subtipoItem: armor.type, dano: 0, herida: '', carga: armor.load, competencia: '', notas: `Protección: ${armor.protection}`, modificadorParada: 0 } });
+    const shield = equipmentCatalog.shields.find(item => item.id === equipment?.shield);
+    if (shield) items.push({ item: { tipoItem: 'Escudo', nombre: shield.name, subtipoItem: '', dano: 0, herida: '', carga: shield.load, competencia: '', notas: `Modificador de Parada: +${shield.parryModifier}`, modificadorParada: shield.parryModifier } });
+    const helmet = equipmentCatalog.helmets.find(item => item.id === equipment?.helmet);
+    if (helmet) items.push({ item: { tipoItem: 'Yelmo', nombre: helmet.name, subtipoItem: helmet.type, dano: 0, herida: '', carga: helmet.load, competencia: '', notas: `Protección: ${helmet.protection}`, modificadorParada: 0 } });
+    return items;
+}
+
 function renderCombatChoices(culture) {
     if (!culture) return '<div class="guided-intro"><p>Selecciona primero una cultura.</p></div>';
     culture.combatProficiencies.forEach(choice => { if (!guidedDraft.combatProficiencies[choice.id]) guidedDraft.combatProficiencies[choice.id] = choice.options[0]; });
@@ -338,11 +466,16 @@ function applyCultureToAdventurer(source, culture, options = {}) {
     const attributes = { fuerza: row.strength, corazon: row.heart, mente: row.mind };
     Object.entries(attributes).forEach(([key, value]) => { result.atributos[key].valor = value; result.atributos[key].tn = baseNO - value; });
     Object.entries(cultureSkillGroups).forEach(([group, groupSkills]) => groupSkills.forEach(skill => { result.habilidades[group][skill].rango = culture.skills[skill]; result.habilidades[group][skill].favorecida = favoredSkills.includes(skill); }));
+    Object.entries(options.additionalRanks?.skills || {}).forEach(([skill, purchased]) => {
+        const group = Object.entries(cultureSkillGroups).find(([, groupSkills]) => groupSkills.includes(skill))?.[0];
+        if (group && skill in result.habilidades[group]) result.habilidades[group][skill].rango += Math.max(0, Number(purchased) || 0);
+    });
     Object.keys(result.combate.competencias).forEach(skill => { result.combate.competencias[skill] = 0; });
     culture.combatProficiencies.forEach(choice => {
         const skill = options.combatProficiencies?.[choice.id];
         if (skill in result.combate.competencias) result.combate.competencias[skill] += choice.rank;
     });
+    Object.entries(options.additionalRanks?.combat || {}).forEach(([skill, purchased]) => { if (skill in result.combate.competencias) result.combate.competencias[skill] += Math.max(0, Number(purchased) || 0); });
     result.informacionGeneral.culturaHeroica = culture.name;
     result.informacionGeneral.nivelDeVida = culture.standardOfLiving;
     result.informacionGeneral.bendicionCultural = `${culture.blessing.title}: ${culture.blessing.text}`;
@@ -350,13 +483,19 @@ function applyCultureToAdventurer(source, culture, options = {}) {
     result.estadisticas.aguante.actual = result.estadisticas.aguante.maximo;
     result.estadisticas.esperanza.maxima = attributes.corazon + culture.derivedStats.hopeBonus;
     result.estadisticas.esperanza.actual = result.estadisticas.esperanza.maxima;
-    result.estadisticas.parada = attributes.mente + culture.derivedStats.parryBonus;
+    const baseParry = attributes.mente + culture.derivedStats.parryBonus;
+    if (options.equipment) result.combate.equipoGuerra = selectedEquipmentItems(options.equipment);
+    const equipmentParryModifier = (result.combate.equipoGuerra || []).reduce((total, gear) => total + Number(gear.item?.modificadorParada || 0), 0);
+    result.creation = { ...result.creation, baseParry };
+    result.estadisticas.parada = baseParry + equipmentParryModifier;
     result.desarrollo.virtudes = (culture.virtues || []).map(virtue => `${virtue.title}: ${virtue.text}`).join('\n\n');
     const distinctiveFeatures = options.distinctiveFeatures || [];
     const occupationFeature = occupationTraitLabel(occupation, options.occupationTraitOption);
-    result.rasgosDistintivos = [...distinctiveFeatures, ...(occupationFeature ? [occupationFeature] : [])];
+    const trancosFeature = result.trancos ? [TRANCOS_FEATURE] : [];
+    result.rasgosDistintivos = [...distinctiveFeatures, ...(occupationFeature ? [occupationFeature] : []), ...trancosFeature];
+    result.reglasEspeciales = result.trancos ? [TRANCOS_FEATURE + ': ' + TRANCOS_FEATURE_DESCRIPTION] : [];
     result.sombra.senda = occupation?.shadowPath || result.sombra.senda;
-    result.creation = { ...result.creation, version: 1, cultureId: culture.id, attributeRoll: row.roll, favoredSkills, occupationFavoredSkills: [...(options.occupationFavoredSkills || [])], combatProficiencies: options.combatProficiencies || {}, distinctiveFeatures: [...distinctiveFeatures], occupationDistinctiveFeature: occupationFeature, culturalShadowRule: culture.shadowRule, completed: true };
+    result.creation = { ...result.creation, version: 1, cultureId: culture.id, attributeRoll: row.roll, favoredSkills, occupationFavoredSkills: [...(options.occupationFavoredSkills || [])], combatProficiencies: options.combatProficiencies || {}, additionalRanks: JSON.parse(JSON.stringify(options.additionalRanks || { skills: {}, combat: {} })), advancementPointsSpent: calculateAdvancementPoints(culture, options.additionalRanks, options.combatProficiencies), advancementPointsBudget: result.trancos ? 15 : 10, equipment: JSON.parse(JSON.stringify(options.equipment || { weapons: {}, armor: '', shield: '', helmet: '' })), distinctiveFeatures: [...distinctiveFeatures], occupationDistinctiveFeature: occupationFeature, trancosFeature: result.trancos ? TRANCOS_FEATURE : '', trancosRule: result.trancos ? TRANCOS_FEATURE_DESCRIPTION : '', trancosTravelInspired: Boolean(result.trancos), culturalShadowRule: culture.shadowRule, completed: true };
     return result;
 }
 
@@ -366,7 +505,7 @@ function renderGuidedStep() {
         {
             title: 'Elige una base de creación',
             subtitle: 'Puedes cambiar estos valores más adelante desde la ficha.',
-            content: `<div class="guided-intro"><i class="fa-solid fa-feather-pointed"></i><p>La guía prepara únicamente los datos esenciales. El resto de la hoja queda disponible para introducirlo directamente y los valores calculados se ofrecen como base editable.</p></div><div class="guided-mode-grid"><label class="guided-mode-card"><input type="radio" name="guided-trancos" value="false" data-guided-mode><span><strong>Modo tradicional</strong><small>Valores objetivo con base 20.</small></span></label><label class="guided-mode-card"><input type="radio" name="guided-trancos" value="true" data-guided-mode><span><strong>Modo Trancos</strong><small>Valores objetivo con base 18.</small></span></label></div>`
+            content: `<div class="guided-intro"><i class="fa-solid fa-feather-pointed"></i><p>La guía prepara únicamente los datos esenciales. El resto de la hoja queda disponible para introducirlo directamente y los valores calculados se ofrecen como base editable.</p></div><div class="guided-mode-grid"><label class="guided-mode-card"><input type="radio" name="guided-trancos" value="false" data-guided-mode><span><strong>Modo tradicional</strong><small>Valores objetivo con base 20 y 10 puntos de experiencia previa.</small></span></label><label class="guided-mode-card"><input type="radio" name="guided-trancos" value="true" data-guided-mode><span><strong>Modo Trancos</strong><small>Valores objetivo con base 18, 15 puntos y el rasgo Trancos.</small></span></label></div>`
         },
         {
             title: 'Datos del aventurero',
@@ -394,6 +533,16 @@ function renderGuidedStep() {
             content: renderCombatChoices(culture)
         },
         {
+            title: 'Compra de niveles',
+            subtitle: 'Invierte los 10 puntos de experiencia previa.',
+            content: renderAdditionalRanks(culture)
+        },
+        {
+            title: 'Equipo de guerra',
+            subtitle: 'Elige armas, armadura y protección opcional.',
+            content: renderEquipmentChoices(culture)
+        },
+        {
             title: 'Rasgos distintivos',
             subtitle: 'Elige dos rasgos disponibles para la cultura.',
             content: renderTraitChoices(culture)
@@ -401,7 +550,7 @@ function renderGuidedStep() {
         {
             title: 'Confirmar creación',
             subtitle: 'Comprueba las elecciones antes de aplicar la cultura.',
-            content: `<div class="guided-summary"><div class="guided-summary-icon"><i class="fa-solid fa-scroll"></i></div><p>Se aplicará <strong>${escapeHtml(culture?.name || 'la cultura seleccionada')}</strong> a la ficha y todos los campos seguirán siendo editables.</p><div class="guided-summary-grid"><span>Fila de atributos</span><strong>${guidedDraft.attributeRoll || 'Pendiente'}</strong><span>Habilidades favorecidas</span><strong>${guidedFavoredSkills(culture).map(displayName).join(', ') || 'Ninguna'}</strong><span>Rasgos distintivos</span><strong>${[...guidedDraft.distinctiveFeatures, occupationTraitLabel(getOccupationByName(adventurer.informacionGeneral.ocupacion), guidedDraft.occupationTraitOption)].filter(Boolean).join(', ') || 'Pendientes'}</strong><span>Número objetivo</span><strong>Base ${adventurer.trancos ? 18 : 20}</strong></div></div>`
+            content: `<div class="guided-summary"><div class="guided-summary-icon"><i class="fa-solid fa-scroll"></i></div><p>Se aplicará <strong>${escapeHtml(culture?.name || 'la cultura seleccionada')}</strong> a la ficha y todos los campos seguirán siendo editables.</p><div class="guided-summary-grid"><span>Fila de atributos</span><strong>${guidedDraft.attributeRoll || 'Pendiente'}</strong><span>Habilidades favorecidas</span><strong>${guidedFavoredSkills(culture).map(displayName).join(', ') || 'Ninguna'}</strong><span>Puntos de mejora</span><strong>${calculateAdvancementPoints(culture)} / ${guidedAdvancementBudget()}</strong><span>Rasgos distintivos</span><strong>${[...guidedDraft.distinctiveFeatures, occupationTraitLabel(getOccupationByName(adventurer.informacionGeneral.ocupacion), guidedDraft.occupationTraitOption), ...(adventurer.trancos ? [TRANCOS_FEATURE] : [])].filter(Boolean).join(', ') || 'Pendientes'}</strong><span>Número objetivo</span><strong>Base ${adventurer.trancos ? 18 : 20}</strong></div></div>`
         }
     ];
     const current = steps[guidedStep];
@@ -426,7 +575,9 @@ function renderGuidedStep() {
 function updateGuidedValue(input) {
     if (!input?.dataset?.guidedPath) return;
     if (input.matches('[data-guided-mode]')) {
+        const previousMode = adventurer.trancos;
         adventurer.trancos = input.value === 'true';
+        if (previousMode !== adventurer.trancos) guidedDraft.additionalRanks = { skills: {}, combat: {} };
         updateCalculatedFields();
         return;
     }
@@ -440,7 +591,7 @@ function updateGuidedValue(input) {
 }
 
 function validateGuidedStep() {
-    if (guidedStep === 0 || guidedStep === 5 || guidedStep === 7) return true;
+    if (guidedStep === 0 || guidedStep === 5 || guidedStep === 6) return true;
     if (guidedStep === 2 && !guidedDraft.cultureId) return false;
     if (guidedStep === 3 && !guidedDraft.attributeRoll) return false;
     if (guidedStep === 4) {
@@ -448,7 +599,14 @@ function validateGuidedStep() {
         if (getOccupationByName(adventurer.informacionGeneral.ocupacion)?.distinctiveFeature?.options && !guidedDraft.occupationTraitOption) return false;
         return true;
     }
-    if (guidedStep === 6 && guidedDraft.distinctiveFeatures.length !== 2) return false;
+    if (guidedStep === 7) {
+        const culture = getCultureById(guidedDraft.cultureId);
+        const finalRanks = guidedCombatFinalRanks(culture);
+        const missingWeapon = guidedCombatSkills.some(skill => finalRanks[skill] > 0 && !guidedDraft.equipment?.weapons?.[skill]);
+        if (missingWeapon || !guidedDraft.equipment?.armor) return false;
+        return true;
+    }
+    if (guidedStep === 8 && guidedDraft.distinctiveFeatures.length !== 2) return false;
     const invalid = [...guidedStepContent.querySelectorAll('[aria-required="true"]')].find(input => !String(input.value).trim());
     if (!invalid) return true;
     invalid.focus();
@@ -474,11 +632,11 @@ function completeGuidedCreation() {
 }
 
 async function guideNewAdventurer() {
-    await Promise.all([loadCultures(), loadOccupations()]);
+    await Promise.all([loadCultures(), loadOccupations(), loadEquipmentCatalog()]);
     const savedOccupation = getOccupationByName(adventurer.informacionGeneral.ocupacion);
     const savedOccupationFeature = adventurer.creation?.occupationDistinctiveFeature || '';
     const savedOccupationTraitOption = savedOccupation?.distinctiveFeature?.options?.find(option => savedOccupationFeature === `${savedOccupation.distinctiveFeature.name}: ${option}`) || '';
-    guidedDraft = { cultureId: adventurer.creation?.cultureId || '', attributeRoll: adventurer.creation?.attributeRoll || null, favoredSkills: [...(adventurer.creation?.favoredSkills || [])], occupationFavoredSkills: [...(adventurer.creation?.occupationFavoredSkills || [])], combatProficiencies: { ...(adventurer.creation?.combatProficiencies || {}) }, distinctiveFeatures: [...(adventurer.creation?.distinctiveFeatures || adventurer.rasgosDistintivos || [])], occupationTraitOption: savedOccupationTraitOption };
+    guidedDraft = { cultureId: adventurer.creation?.cultureId || '', attributeRoll: adventurer.creation?.attributeRoll || null, favoredSkills: [...(adventurer.creation?.favoredSkills || [])], occupationFavoredSkills: [...(adventurer.creation?.occupationFavoredSkills || [])], combatProficiencies: { ...(adventurer.creation?.combatProficiencies || {}) }, additionalRanks: JSON.parse(JSON.stringify(adventurer.creation?.additionalRanks || { skills: {}, combat: {} })), equipment: JSON.parse(JSON.stringify(adventurer.creation?.equipment || { weapons: {}, armor: '', shield: '', helmet: '' })), distinctiveFeatures: [...(adventurer.creation?.distinctiveFeatures || adventurer.rasgosDistintivos || [])].filter(feature => feature !== TRANCOS_FEATURE), occupationTraitOption: savedOccupationTraitOption };
     guidedStep = 0;
     renderGuidedStep();
     if (guidedModal) guidedModal.show();
@@ -493,6 +651,8 @@ guidedForm.addEventListener('change', event => {
         guidedDraft.favoredSkills = [];
         guidedDraft.occupationFavoredSkills = [];
         guidedDraft.combatProficiencies = {};
+        guidedDraft.additionalRanks = { skills: {}, combat: {} };
+        guidedDraft.equipment = { weapons: {}, armor: '', shield: '', helmet: '' };
         guidedDraft.distinctiveFeatures = [];
         renderGuidedStep();
         return;
@@ -513,8 +673,15 @@ guidedForm.addEventListener('change', event => {
         renderGuidedStep();
         return;
     }
-    if (input.matches('[data-guided-combat]')) { guidedDraft.combatProficiencies[input.dataset.guidedCombat] = input.value; return; }
+    if (input.matches('[data-guided-combat]')) { guidedDraft.combatProficiencies[input.dataset.guidedCombat] = input.value; guidedDraft.additionalRanks = { skills: {}, combat: {} }; guidedDraft.equipment = { weapons: {}, armor: '', shield: '', helmet: '' }; renderGuidedStep(); return; }
     if (input.matches('[data-guided-occupation-trait]')) { guidedDraft.occupationTraitOption = input.value; renderGuidedStep(); return; }
+    if (input.matches('[data-guided-equipment]')) {
+        const category = input.dataset.guidedEquipment;
+        if (category.startsWith('weapon-')) guidedDraft.equipment.weapons[category.replace('weapon-', '')] = input.value;
+        else guidedDraft.equipment[category] = input.value;
+        renderGuidedStep();
+        return;
+    }
     if (input.matches('[data-guided-trait]')) {
         const selectedInputs = [...guidedStepContent.querySelectorAll('[data-guided-trait]:checked')];
         if (selectedInputs.length > 2) input.checked = false;
@@ -525,6 +692,26 @@ guidedForm.addEventListener('change', event => {
     updateGuidedValue(input);
 });
 guidedForm.addEventListener('click', event => {
+    const purchaseButton = event.target.closest('[data-guided-purchase]');
+    if (purchaseButton) {
+        const culture = getCultureById(guidedDraft.cultureId);
+        const type = purchaseButton.dataset.guidedPurchase;
+        const skill = purchaseButton.dataset.guidedPurchaseKey;
+        const delta = Number(purchaseButton.dataset.guidedPurchaseDelta);
+        const current = Number(guidedDraft.additionalRanks?.[type]?.[skill] || 0);
+        const next = Math.max(0, current + delta);
+        const baseRank = type === 'combat' ? guidedCombatBaseRanks(culture)[skill] : culture?.skills?.[skill] || 0;
+        const currentCost = additionalCost(baseRank, current, type);
+        const nextCost = additionalCost(baseRank, next, type);
+        const spent = calculateAdvancementPoints(culture, guidedDraft.additionalRanks);
+        if (nextCost <= currentCost || spent - currentCost + nextCost <= guidedAdvancementBudget()) {
+            guidedDraft.additionalRanks[type][skill] = next;
+            if (!next) delete guidedDraft.additionalRanks[type][skill];
+            guidedDraft.equipment = { weapons: {}, armor: '', shield: '', helmet: '' };
+            renderGuidedStep();
+        }
+        return;
+    }
     if (event.target.closest('#guided-roll-attributes')) { guidedDraft.attributeRoll = Math.floor(Math.random() * 6) + 1; renderGuidedStep(); }
 });
 guidedForm.addEventListener('submit', event => {

@@ -1,0 +1,34 @@
+{
+  "weapons": [
+    { "id": "sin-armas", "name": "Sin armas", "damage": 1, "injury": "—", "load": 0, "competence": "", "notes": "Incluido lanzar piedras. No puede ocasionar golpes perforantes." },
+    { "id": "daga", "name": "Daga", "damage": 2, "injury": "14", "load": 0, "competence": "pelea", "notes": "" },
+    { "id": "porra", "name": "Porra", "damage": 3, "injury": "12", "load": 0, "competence": "pelea", "notes": "" },
+    { "id": "clava", "name": "Clava", "damage": 4, "injury": "14", "load": 1, "competence": "pelea", "notes": "" },
+    { "id": "espada-corta", "name": "Espada corta", "damage": 3, "injury": "16", "load": 1, "competence": "espadas", "notes": "" },
+    { "id": "espada", "name": "Espada", "damage": 4, "injury": "16", "load": 2, "competence": "espadas", "notes": "" },
+    { "id": "espada-larga", "name": "Espada larga", "damage": 5, "injury": "16 (1m) / 18 (2m)", "load": 3, "competence": "espadas", "notes": "Arma a una o dos manos." },
+    { "id": "lanza-corta", "name": "Lanza corta", "damage": 3, "injury": "14", "load": 2, "competence": "lanzas", "notes": "Puede lanzarse." },
+    { "id": "lanza", "name": "Lanza", "damage": 4, "injury": "14 (1m) / 16 (2m)", "load": 3, "competence": "lanzas", "notes": "Arma a una o dos manos. Puede lanzarse." },
+    { "id": "lanza-larga", "name": "Lanza larga", "damage": 5, "injury": "16", "load": 4, "competence": "lanzas", "notes": "Arma a dos manos." },
+    { "id": "hacha", "name": "Hacha", "damage": 5, "injury": "18", "load": 2, "competence": "hachas", "notes": "" },
+    { "id": "hacha-mango-largo", "name": "Hacha de mango largo", "damage": 6, "injury": "18 (1m) / 20 (2m)", "load": 3, "competence": "hachas", "notes": "Arma a una o dos manos." },
+    { "id": "gran-hacha", "name": "Gran hacha", "damage": 7, "injury": "20", "load": 4, "competence": "hachas", "notes": "Arma a dos manos." },
+    { "id": "piqueta", "name": "Piqueta", "damage": 7, "injury": "18", "load": 3, "competence": "hachas", "notes": "Arma a dos manos." },
+    { "id": "arco", "name": "Arco", "damage": 3, "injury": "14", "load": 2, "competence": "arcos", "notes": "Arma a distancia." },
+    { "id": "arco-largo", "name": "Arco largo", "damage": 4, "injury": "16", "load": 4, "competence": "arcos", "notes": "Arma a distancia." }
+  ],
+  "armor": [
+    { "id": "coleto-cuero", "name": "Coleto de cuero", "protection": "1d", "load": 3, "type": "Armadura de cuero" },
+    { "id": "jubon-cuero", "name": "Jubón de cuero", "protection": "2d", "load": 6, "type": "Armadura de cuero" },
+    { "id": "camisote-malla", "name": "Camisote de malla", "protection": "3d", "load": 9, "type": "Armadura de malla" },
+    { "id": "cota-malla", "name": "Cota de malla", "protection": "4d", "load": 12, "type": "Armadura de malla" }
+  ],
+  "helmets": [
+    { "id": "casco", "name": "Casco", "protection": "+1d", "load": 4, "type": "Cubrecabezas" }
+  ],
+  "shields": [
+    { "id": "rodela", "name": "Rodela", "parryModifier": 1, "load": 2 },
+    { "id": "escudo", "name": "Escudo", "parryModifier": 2, "load": 4 },
+    { "id": "escudo-paves", "name": "Escudo pavés", "parryModifier": 3, "load": 6 }
+  ]
+}
