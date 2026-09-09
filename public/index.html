@@ -115,7 +115,7 @@
 
     <!-- Admin Panel Modal -->
     <div class="modal fade" id="adminModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content tor-book-panel border-0 shadow-lg">
                 <div class="tor-corner-tl"></div><div class="tor-corner-tr"></div><div class="tor-corner-bl"></div><div class="tor-corner-br"></div>
                 <div class="modal-header border-bottom-0 pb-0">
@@ -160,6 +160,26 @@
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    </div>
+                    <div class="admin-visibility-section mt-4 pt-3 border-top">
+                        <h6 class="tor-label border-bottom pb-2 mb-3">GESTIONAR VISIBILIDAD DE HOJAS</h6>
+                        <p class="small text-muted mb-3">Los administradores pueden ver todas las hojas. Asigna un propietario y decide si cada hoja es privada, visible para usuarios concretos o visible para todos.</p>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle admin-visibility-table">
+                                <thead>
+                                    <tr>
+                                        <th>Hoja</th>
+                                        <th>Propietario</th>
+                                        <th>Acceso</th>
+                                        <th>Usuarios autorizados</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-adventurers-list">
+                                    <tr><td colspan="5" class="text-muted">Cargando hojas…</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

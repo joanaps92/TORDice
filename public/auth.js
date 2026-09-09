@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetPasswordForm = document.getElementById('reset-password-form');
     const createUserForm = document.getElementById('create-user-form');
     const editUserForm = document.getElementById('edit-user-form');
+    let adminUsers = [];
 
     function showScreen(screen) {
         authScreen.classList.add('d-none');
@@ -189,21 +190,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Admin Functions
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
+    }
+
     async function loadUsers() {
         const res = await fetch('/api/admin/users', {
             headers: { 'Authorization': `Bearer ${getToken()}` }
         });
         if (res.ok) {
             const users = await res.json();
+            adminUsers = users;
             const tbody = document.getElementById('admin-users-list');
             tbody.innerHTML = '';
             users.forEach(u => {
                 tbody.innerHTML += `
                     <tr>
-                        <td>${u.username}</td>
-                        <td>${u.role}</td>
+                        <td>${escapeHtml(u.username)}</td>
+                        <td>${escapeHtml(u.role)}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary edit-user-btn" data-id="${u._id}" data-username="${u.username}" data-role="${u.role}">Editar</button>
+                            <button class="btn btn-sm btn-outline-primary edit-user-btn" data-id="${u._id}" data-username="${escapeHtml(u.username)}" data-role="${escapeHtml(u.role)}">Editar</button>
                         </td>
                     </tr>
                 `;
@@ -221,7 +227,107 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    document.getElementById('adminModal').addEventListener('show.bs.modal', loadUsers);
+    function renderVisibilityUsers(select, selectedIds) {
+        const selected = new Set((selectedIds || []).map(String));
+        select.innerHTML = adminUsers.map(user => `
+            <option value="${user._id}" ${selected.has(String(user._id)) ? 'selected' : ''}>${escapeHtml(user.username)}${user.role === 'admin' ? ' (admin)' : ''}</option>
+        `).join('');
+    }
+
+    function updateVisibilityUsersState(row) {
+        const visibility = row.querySelector('.admin-sheet-visibility').value;
+        const usersSelect = row.querySelector('.admin-sheet-users');
+        usersSelect.disabled = visibility !== 'selected';
+    }
+
+    async function loadAdventurerVisibility() {
+        const tbody = document.getElementById('admin-adventurers-list');
+        tbody.innerHTML = '<tr><td colspan="5" class="text-muted">Cargando hojas…</td></tr>';
+        const res = await fetch('/api/admin/adventurers', {
+            headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            tbody.innerHTML = `<tr><td colspan="5" class="text-danger">${escapeHtml(data.error || 'No se pudieron cargar las hojas.')}</td></tr>`;
+            return;
+        }
+
+        const adventurers = await res.json();
+        if (!adventurers.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-muted">Todavía no hay hojas guardadas.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = adventurers.map(adventurer => {
+            const visibility = adventurer.visibility || 'private';
+            const ownerId = adventurer.ownerId?._id || adventurer.ownerId || '';
+            const ownerOptions = '<option value="">Sin propietario</option>' + adminUsers.map(user => `
+                <option value="${user._id}" ${String(ownerId) === String(user._id) ? 'selected' : ''}>${escapeHtml(user.username)}${user.role === 'admin' ? ' (admin)' : ''}</option>
+            `).join('');
+            return `
+                <tr data-adventurer-id="${adventurer._id}">
+                    <td><strong>${escapeHtml(adventurer.nombre)}</strong><small class="d-block text-muted">${adventurer.ownerId ? 'Hoja asignada' : 'Sin propietario (hoja antigua)'}</small></td>
+                    <td><select class="form-select form-select-sm tor-select admin-sheet-owner">${ownerOptions}</select></td>
+                    <td>
+                        <select class="form-select form-select-sm tor-select admin-sheet-visibility">
+                            <option value="private" ${visibility === 'private' ? 'selected' : ''}>Solo propietario</option>
+                            <option value="selected" ${visibility === 'selected' ? 'selected' : ''}>Usuarios seleccionados</option>
+                            <option value="all" ${visibility === 'all' ? 'selected' : ''}>Todos los usuarios</option>
+                        </select>
+                    </td>
+                    <td><select class="form-select form-select-sm tor-select admin-sheet-users" multiple size="3" aria-label="Usuarios autorizados"></select></td>
+                    <td><button type="button" class="btn btn-sm btn-tor-primary admin-save-visibility">Guardar</button></td>
+                </tr>
+            `;
+        }).join('');
+
+        adventurers.forEach(adventurer => {
+            const row = tbody.querySelector(`tr[data-adventurer-id="${adventurer._id}"]`);
+            if (!row) return;
+            renderVisibilityUsers(row.querySelector('.admin-sheet-users'), (adventurer.visibleTo || []).map(user => user._id || user));
+            updateVisibilityUsersState(row);
+        });
+    }
+
+    async function refreshAdminPanel() {
+        await loadUsers();
+        await loadAdventurerVisibility();
+    }
+
+    document.getElementById('adminModal').addEventListener('show.bs.modal', refreshAdminPanel);
+
+    document.getElementById('admin-adventurers-list').addEventListener('change', (event) => {
+        const row = event.target.closest('tr[data-adventurer-id]');
+        if (row && event.target.classList.contains('admin-sheet-visibility')) updateVisibilityUsersState(row);
+    });
+
+    document.getElementById('admin-adventurers-list').addEventListener('click', async (event) => {
+        const button = event.target.closest('.admin-save-visibility');
+        if (!button) return;
+        const row = button.closest('tr[data-adventurer-id]');
+        const visibility = row.querySelector('.admin-sheet-visibility').value;
+        const visibleTo = [...row.querySelector('.admin-sheet-users').selectedOptions].map(option => option.value);
+        button.disabled = true;
+        try {
+            const res = await fetch(`/api/admin/adventurers/${row.dataset.adventurerId}/visibility`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+                body: JSON.stringify({
+                    ownerId: row.querySelector('.admin-sheet-owner').value || null,
+                    visibility,
+                    visibleTo
+                })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'No se pudo guardar la visibilidad.');
+            button.textContent = 'Guardado';
+            setTimeout(() => { button.textContent = 'Guardar'; }, 1500);
+        } catch (error) {
+            appAlert(error.message);
+        } finally {
+            button.disabled = false;
+        }
+    });
 
     createUserForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -241,7 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (res.ok) {
             appAlert("Usuario creado", "Usuario creado");
             createUserForm.reset();
-            loadUsers();
+            refreshAdminPanel();
         } else {
             const data = await res.json();
             appAlert(data.error);
@@ -270,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
             appAlert("Usuario actualizado", "Usuario actualizado");
             editUserForm.reset();
             bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
-            loadUsers();
+            refreshAdminPanel();
         } else {
             const data = await res.json();
             appAlert(data.error);

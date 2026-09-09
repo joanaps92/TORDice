@@ -30,6 +30,11 @@ const adventurerSchema = new mongoose.Schema({
   nombre: { type: String, required: true, trim: true },
   trancos: { type: Boolean, default: false },
   ficha: { type: mongoose.Schema.Types.Mixed, required: true },
+  // Se mantienen opcionales para que las hojas creadas antes de introducir
+  // el control de visibilidad sigan siendo legibles por los administradores.
+  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
+  visibility: { type: String, enum: ['private', 'selected', 'all'], default: 'private' },
+  visibleTo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

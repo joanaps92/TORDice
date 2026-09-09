@@ -1099,6 +1099,13 @@ h1, h2, h3, h4, h5, h6,
 .trancos-rule-note strong { color: var(--tor-red-dark); font: 700 .76rem 'Cinzel', serif; text-transform: uppercase; }
 .trancos-rule-note p { margin: 3px 0 0; color: var(--tor-ink); font: 1rem 'Crimson Pro', Georgia, serif; }
 .stat-help { color: var(--tor-ink-muted); font: .78rem 'Crimson Pro', Georgia, serif; }
+.admin-visibility-table { min-width: 880px; }
+.admin-visibility-table th { color: var(--tor-red-dark); font: 700 .72rem 'Cinzel', serif; text-transform: uppercase; white-space: nowrap; }
+.admin-visibility-table td { vertical-align: middle; }
+.admin-visibility-table .admin-sheet-owner { min-width: 150px; }
+.admin-visibility-table .admin-sheet-visibility { min-width: 175px; }
+.admin-visibility-table .admin-sheet-users { min-width: 190px; }
+.admin-visibility-table select[multiple] { padding: 4px; }
 
 @media (max-width: 575.98px) {
     .guided-mode-grid, .guided-attribute-grid, .guided-fields-grid { grid-template-columns: 1fr; }

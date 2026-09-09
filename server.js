@@ -1,6 +1,7 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const mongoose = require('mongoose');
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -55,6 +56,18 @@ const isAdmin = (req, res, next) => {
     }
     next();
 };
+
+const isAdventurerOwner = (adventurer, req) => adventurer.ownerId && adventurer.ownerId.toString() === req.user.id.toString();
+
+const canViewAdventurer = (adventurer, req) => {
+    if (req.user.role === 'admin' || isAdventurerOwner(adventurer, req)) return true;
+    if (adventurer.visibility === 'all') return true;
+    return adventurer.visibility === 'selected'
+        && Array.isArray(adventurer.visibleTo)
+        && adventurer.visibleTo.some(userId => userId.toString() === req.user.id.toString());
+};
+
+const canEditAdventurer = (adventurer, req) => req.user.role === 'admin' || isAdventurerOwner(adventurer, req);
 
 // --- AUTHENTICATION ROUTES ---
 
@@ -214,11 +227,84 @@ app.put('/api/admin/users/:id', authenticateToken, isAdmin, async (req, res) => 
     }
 });
 
+app.get('/api/admin/adventurers', authenticateToken, isAdmin, async (_req, res) => {
+    try {
+        const adventurers = await Adventurer.find()
+            .sort({ updatedAt: -1 })
+            .populate('ownerId', 'username role')
+            .populate('visibleTo', 'username role')
+            .lean();
+        res.json(adventurers);
+    } catch (err) {
+        console.error('Error al listar visibilidad de aventureros:', err);
+        res.status(500).json({ error: 'No se pudo cargar la visibilidad de las hojas.' });
+    }
+});
+
+app.put('/api/admin/adventurers/:id/visibility', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { ownerId, visibility = 'private', visibleTo = [] } = req.body;
+        if (!['private', 'selected', 'all'].includes(visibility)) {
+            return res.status(400).json({ error: 'Tipo de visibilidad no válido.' });
+        }
+
+        const normalizedOwnerId = ownerId ? String(ownerId) : null;
+        if (normalizedOwnerId && !mongoose.Types.ObjectId.isValid(normalizedOwnerId)) {
+            return res.status(400).json({ error: 'El propietario indicado no es válido.' });
+        }
+
+        const requestedUsers = Array.isArray(visibleTo) ? visibleTo.map(String) : [];
+        const uniqueUserIds = [...new Set(requestedUsers)];
+        if (uniqueUserIds.some(userId => !mongoose.Types.ObjectId.isValid(userId))) {
+            return res.status(400).json({ error: 'Hay usuarios autorizados no válidos.' });
+        }
+        if (normalizedOwnerId) {
+            const ownerIndex = uniqueUserIds.indexOf(normalizedOwnerId);
+            if (ownerIndex !== -1) uniqueUserIds.splice(ownerIndex, 1);
+        }
+
+        const adventurer = await Adventurer.findById(req.params.id);
+        if (!adventurer) return res.status(404).json({ error: 'Aventurero no encontrado.' });
+
+        if (normalizedOwnerId) {
+            const owner = await User.exists({ _id: normalizedOwnerId });
+            if (!owner) return res.status(400).json({ error: 'El propietario indicado no existe.' });
+        }
+        if (uniqueUserIds.length) {
+            const users = await User.find({ _id: { $in: uniqueUserIds } }).select('_id').lean();
+            if (users.length !== uniqueUserIds.length) return res.status(400).json({ error: 'Uno de los usuarios autorizados no existe.' });
+        }
+
+        adventurer.ownerId = normalizedOwnerId || undefined;
+        adventurer.visibility = visibility;
+        adventurer.visibleTo = visibility === 'selected' ? uniqueUserIds : [];
+        await adventurer.save();
+
+        const updated = await Adventurer.findById(adventurer._id)
+            .populate('ownerId', 'username role')
+            .populate('visibleTo', 'username role')
+            .lean();
+        res.json(updated);
+    } catch (err) {
+        console.error('Error al actualizar visibilidad de aventurero:', err);
+        res.status(400).json({ error: 'No se pudo actualizar la visibilidad de la hoja.' });
+    }
+});
+
 
 // Aventureros: el cliente conserva el mismo documento JSON que usa la ficha.
-app.get('/api/adventurers', authenticateToken, async (_req, res) => {
+app.get('/api/adventurers', authenticateToken, async (req, res) => {
     try {
-        const adventurers = await Adventurer.find().sort({ updatedAt: -1 }).lean();
+        const query = req.user.role === 'admin'
+            ? {}
+            : {
+                $or: [
+                    { ownerId: req.user.id },
+                    { visibility: 'all' },
+                    { visibility: 'selected', visibleTo: req.user.id }
+                ]
+            };
+        const adventurers = await Adventurer.find(query).sort({ updatedAt: -1 }).lean();
         res.json(adventurers);
     } catch (err) {
         console.error('Error al listar aventureros:', err);
@@ -233,7 +319,15 @@ app.post('/api/adventurers', authenticateToken, async (req, res) => {
         if (!nombre) return res.status(400).json({ error: 'El nombre del aventurero es obligatorio.' });
         const duplicate = await Adventurer.findOne({ nombre: { $regex: `^${nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } });
         if (duplicate) return res.status(409).json({ error: 'Ya existe una hoja con ese nombre. Elige otro nombre.' });
-        const adventurer = await Adventurer.create({ nombre, trancos: Boolean(ficha.trancos), ficha, updatedAt: new Date() });
+        const adventurer = await Adventurer.create({
+            nombre,
+            trancos: Boolean(ficha.trancos),
+            ficha,
+            ownerId: req.user.id,
+            visibility: 'private',
+            visibleTo: [],
+            updatedAt: new Date()
+        });
         res.status(201).json(adventurer);
     } catch (err) {
         console.error('Error al crear aventurero:', err);
@@ -243,13 +337,17 @@ app.post('/api/adventurers', authenticateToken, async (req, res) => {
 
 app.put('/api/adventurers/:id', authenticateToken, async (req, res) => {
     try {
+        const existing = await Adventurer.findById(req.params.id);
+        if (!existing) return res.status(404).json({ error: 'Aventurero no encontrado.' });
+        if (!canViewAdventurer(existing, req)) return res.status(403).json({ error: 'No tienes permiso para ver esta hoja.' });
+        if (!canEditAdventurer(existing, req)) return res.status(403).json({ error: 'Solo el propietario o un administrador puede editar esta hoja.' });
+
         const ficha = req.body;
         const nombre = ficha?.informacionGeneral?.nombre?.trim();
         if (!nombre) return res.status(400).json({ error: 'El nombre del aventurero es obligatorio.' });
         const duplicate = await Adventurer.findOne({ _id: { $ne: req.params.id }, nombre: { $regex: `^${nombre.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } });
         if (duplicate) return res.status(409).json({ error: 'Ya existe otra hoja con ese nombre. Elige otro nombre.' });
         const adventurer = await Adventurer.findByIdAndUpdate(req.params.id, { nombre, trancos: Boolean(ficha.trancos), ficha, updatedAt: new Date() }, { new: true, runValidators: true });
-        if (!adventurer) return res.status(404).json({ error: 'Aventurero no encontrado.' });
         res.json(adventurer);
     } catch (err) {
         console.error('Error al actualizar aventurero:', err);
