@@ -210,7 +210,7 @@
                     <button type="button" class="btn-close" id="guided-close-btn" aria-label="Salir de la guía"></button>
                 </div>
                 <div class="guided-progress px-4">
-                    <div class="progress" role="progressbar" aria-label="Progreso de la guía" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1">
+                    <div class="progress" role="progressbar" aria-label="Progreso de la guía" aria-valuemin="1" aria-valuemax="7" aria-valuenow="1">
                         <div class="progress-bar" id="guided-progress-bar"></div>
                     </div>
                     <span class="guided-progress-label" id="guided-progress-label">Paso 1 de 4</span>
@@ -649,7 +649,7 @@
                     <h2>Nombre</h2>
                     <input class="sheet-name" data-path="informacionGeneral.nombre" placeholder="Nombre del aventurero" aria-label="Nombre" required>
                     <div class="identity-grid">
-                        <label>Cultura heroica<select data-path="informacionGeneral.culturaHeroica"><option value="">Selecciona una cultura…</option><option>Elfos de Lindon</option><option>Enanos del pueblo de Durin</option><option>Hobbits de la comarca</option><option>Hombres de Bardo</option><option>Hombres de Bree</option><option>Montaraces del norte</option><option>Elfos de Lórien</option><option>Altos elfos de Rivendel</option><option>Enanos de Nogrod y Belegost</option></select></label>
+                        <label>Cultura heroica<select data-path="informacionGeneral.culturaHeroica" data-culture-select><option value="">Selecciona una cultura…</option></select></label>
                         <label>Ocupación<select data-path="informacionGeneral.ocupacion"><option value="">Selecciona una ocupación…</option><option>Buscador de tesoros</option><option>Campeón</option><option>Capitán</option><option>Erudito</option><option>Guardián</option><option>Mensajero</option></select></label>
                         <label>Nivel de vida<input data-path="informacionGeneral.nivelDeVida"></label>
                         <label>Edad<input type="number" min="0" data-path="informacionGeneral.edad"></label>

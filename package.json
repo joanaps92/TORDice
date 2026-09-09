@@ -4,7 +4,8 @@
   "description": "App web para tiradas de dados RPG en tiempo real",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "validate:cultures": "node scripts/validate-cultures.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
