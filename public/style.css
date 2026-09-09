@@ -1106,6 +1106,22 @@ h1, h2, h3, h4, h5, h6,
 .admin-visibility-table .admin-sheet-visibility { min-width: 175px; }
 .admin-visibility-table .admin-sheet-users { min-width: 190px; }
 .admin-visibility-table select[multiple] { padding: 4px; }
+.roll-mode-switch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 4px; border: 1px solid var(--tor-red-border); border-radius: 6px; background: rgba(197,160,89,.1); }
+.roll-mode-btn { color: var(--tor-ink-muted); border: 0; font: 700 .7rem 'Cinzel', serif; text-transform: uppercase; }
+.roll-mode-btn:hover, .roll-mode-btn.active { color: #fff; background: var(--tor-red); }
+.roll-mode-btn:disabled { opacity: .45; cursor: not-allowed; }
+.guided-roll-panel { padding: 14px; border: 1px solid var(--tor-red-border); border-radius: 6px; background: rgba(255,255,255,.48); }
+.guided-roll-sheet-note { margin-bottom: 12px; color: var(--tor-ink-muted); font: italic .95rem 'Crimson Pro', Georgia, serif; }
+.guided-roll-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.guided-roll-options label { color: var(--tor-ink); font: 700 .72rem 'Cinzel', serif; text-transform: uppercase; }
+.guided-roll-options input { margin-top: 4px; }
+.guided-roll-checks { display: flex; flex-wrap: wrap; gap: 8px 14px; color: var(--tor-ink); font: .95rem 'Crimson Pro', Georgia, serif; }
+.guided-roll-checks input { accent-color: var(--tor-red); margin-right: 4px; }
+.guided-roll-preview { display: flex; flex-direction: column; gap: 3px; padding: 11px 12px; border-left: 3px solid var(--tor-red); background: rgba(188,44,26,.08); color: var(--tor-ink); font: 1rem 'Crimson Pro', Georgia, serif; }
+.guided-roll-preview strong { color: var(--tor-red-dark); font: 700 .75rem 'Cinzel', serif; text-transform: uppercase; }
+.guided-roll-preview small { color: var(--tor-ink-muted); font-style: italic; }
+.roll-context-line { margin: 2px 0 8px; color: var(--tor-red-dark); font: 1.02rem 'Crimson Pro', Georgia, serif; }
+.roll-context-line span { color: var(--tor-ink-muted); }
 
 @media (max-width: 575.98px) {
     .guided-mode-grid, .guided-attribute-grid, .guided-fields-grid { grid-template-columns: 1fr; }
@@ -1118,4 +1134,5 @@ h1, h2, h3, h4, h5, h6,
     .guided-adventurer-modal .modal-footer { padding: .75rem 1rem 1rem; }
     .guided-progress { padding-left: 1rem !important; padding-right: 1rem !important; }
     .guided-progress-label { font-size: .62rem; }
+    .guided-roll-options { grid-template-columns: 1fr; }
 }

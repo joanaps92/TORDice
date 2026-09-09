@@ -9,6 +9,20 @@ const rollSchema = new mongoose.Schema({
   d6Results:  { type: [Number], default: [] },
   total:      { type: Number, required: true },
   timestamp:  { type: String, required: true },
+  adventurerId: { type: String, default: '' },
+  adventurerName: { type: String, default: '' },
+  rollType: { type: String, default: '' },
+  actionKey: { type: String, default: '' },
+  actionLabel: { type: String, default: '' },
+  targetNumber: { type: Number },
+  modifier: { type: Number, default: 0 },
+  hopeSpent: { type: Boolean, default: false },
+  weary: { type: Boolean, default: false },
+  illFavoured: { type: Boolean, default: false },
+  featDiceMode: { type: String, default: 'normal' },
+  effectiveFeatDie: { type: Number },
+  outcome: { type: String, default: '' },
+  weapon: { type: mongoose.Schema.Types.Mixed },
   createdAt:  { type: Date, default: Date.now }
 });
 

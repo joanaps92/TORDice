@@ -59,15 +59,21 @@ const isAdmin = (req, res, next) => {
 
 const isAdventurerOwner = (adventurer, req) => adventurer.ownerId && adventurer.ownerId.toString() === req.user.id.toString();
 
-const canViewAdventurer = (adventurer, req) => {
-    if (req.user.role === 'admin' || isAdventurerOwner(adventurer, req)) return true;
+const canUserViewAdventurer = (adventurer, user) => {
+    const isOwner = adventurer.ownerId && adventurer.ownerId.toString() === user.id.toString();
+    if (user.role === 'admin' || isOwner) return true;
     if (adventurer.visibility === 'all') return true;
     return adventurer.visibility === 'selected'
         && Array.isArray(adventurer.visibleTo)
-        && adventurer.visibleTo.some(userId => userId.toString() === req.user.id.toString());
+        && adventurer.visibleTo.some(userId => userId.toString() === user.id.toString());
 };
 
+const canViewAdventurer = (adventurer, req) => canUserViewAdventurer(adventurer, req.user);
 const canEditAdventurer = (adventurer, req) => req.user.role === 'admin' || isAdventurerOwner(adventurer, req);
+const normalizeCombatKey = value => {
+    const normalized = String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    return { hacha: 'hachas', hachas: 'hachas', arco: 'arcos', arcos: 'arcos', lanza: 'lanzas', lanzas: 'lanzas', espada: 'espadas', espadas: 'espadas', pelea: 'pelea' }[normalized] || normalized;
+};
 
 // --- AUTHENTICATION ROUTES ---
 
@@ -476,14 +482,87 @@ io.on('connection', (socket) => {
 
     socket.on('roll-dice', async (payload) => {
         try {
-            const { room, d12Count, d6Count, stance } = payload;
             const currentUserObj = activeUsers[socket.id];
+            if (!currentUserObj?.room) return socket.emit('roll-error', 'Debes entrar en una sala antes de lanzar.');
+
+            const d12Count = Number(payload?.d12Count);
+            const d6Count = Number(payload?.d6Count);
+            if (!Number.isInteger(d12Count) || d12Count < 1 || d12Count > 2) {
+                return socket.emit('roll-error', 'La tirada debe tener uno o dos dados de proeza.');
+            }
+            if (!Number.isInteger(d6Count) || d6Count < 0 || d6Count > 6) {
+                return socket.emit('roll-error', 'La tirada debe tener entre cero y seis dados de éxito.');
+            }
+
+            const context = payload?.rollContext && typeof payload.rollContext === 'object' ? payload.rollContext : null;
+            let adventurerName = '';
+            let safeWeapon;
+            let targetNumber;
+            let modifier = 0;
+            let featDiceMode = 'normal';
+            let outcome = '';
+            if (context) {
+                if (!['skill', 'attack'].includes(context.type)) return socket.emit('roll-error', 'El tipo de tirada no es válido.');
+                if (!['normal', 'best', 'worst'].includes(context.featDiceMode)) return socket.emit('roll-error', 'La modalidad del dado de proeza no es válida.');
+                if (context.featDiceMode !== 'normal' && d12Count !== 2) return socket.emit('roll-error', 'Una tirada favorecida o desfavorecida necesita dos dados de proeza.');
+                if (context.featDiceMode === 'normal' && d12Count !== 1) return socket.emit('roll-error', 'Una tirada normal necesita un dado de proeza.');
+
+                modifier = Number(context.modifier || 0);
+                targetNumber = Number(context.targetNumber);
+                if (!Number.isFinite(modifier) || modifier < -20 || modifier > 20) return socket.emit('roll-error', 'El modificador debe estar entre −20 y +20.');
+                if (!Number.isInteger(targetNumber) || targetNumber < 0 || targetNumber > 99) return socket.emit('roll-error', 'El número objetivo no es válido.');
+                featDiceMode = context.featDiceMode;
+
+                if (context.adventurerId) {
+                    if (!mongoose.Types.ObjectId.isValid(String(context.adventurerId))) return socket.emit('roll-error', 'La ficha seleccionada no es válida.');
+                    const adventurer = await Adventurer.findById(context.adventurerId);
+                    if (!adventurer || !canUserViewAdventurer(adventurer, socket.user)) return socket.emit('roll-error', 'No tienes permiso para usar esa ficha.');
+                    adventurerName = adventurer.nombre;
+                    const ficha = adventurer.ficha || {};
+                    if (context.type === 'skill') {
+                        const skillAttributes = { fuerza: ['impresionar', 'atletismo', 'alerta', 'cazar', 'cantar', 'oficio'], corazon: ['alentar', 'viajar', 'perspicacia', 'curar', 'cortesia', 'guerrear'], mente: ['persuadir', 'sigilo', 'inspeccionar', 'explorar', 'acertijos', 'saber'] };
+                        const attributeKey = Object.entries(skillAttributes).find(([, skills]) => skills.includes(context.sourceKey))?.[0];
+                        const skill = attributeKey && ficha.habilidades?.[attributeKey]?.[context.sourceKey];
+                        const attribute = attributeKey && ficha.atributos?.[attributeKey];
+                        if (!skill || !attribute) return socket.emit('roll-error', 'La habilidad no existe en la ficha seleccionada.');
+                        const expectedD6 = Math.max(0, Math.min(6, Math.trunc(Number(skill.rango) || 0)));
+                        const expectedMode = context.illFavoured ? 'worst' : (skill.favorecida ? 'best' : 'normal');
+                        const expectedTarget = Number.isFinite(Number(attribute.tn)) ? Number(attribute.tn) : (ficha.trancos ? 18 : 20) - (Number(attribute.valor) || 0);
+                        if (d6Count !== expectedD6 || featDiceMode !== expectedMode || targetNumber !== expectedTarget) return socket.emit('roll-error', 'La preparación de la habilidad ya no coincide con la ficha guardada.');
+                    } else {
+                        const gearIndex = Number(context.gearIndex);
+                        const gear = Number.isInteger(gearIndex) && gearIndex >= 0 ? ficha.combate?.equipoGuerra?.[gearIndex] : null;
+                        const competenceKey = normalizeCombatKey(gear?.item?.competencia);
+                        const expectedD6 = Number(ficha.combate?.competencias?.[competenceKey] || 0);
+                        if (!gear?.item?.nombre || competenceKey !== context.sourceKey || expectedD6 <= 0 || d6Count !== expectedD6) return socket.emit('roll-error', 'El arma o su competencia ya no coincide con la ficha guardada.');
+                    }
+                } else {
+                    return socket.emit('roll-error', 'Las tiradas guiadas necesitan una ficha seleccionada.');
+                }
+                if (context.weapon && typeof context.weapon === 'object') {
+                    safeWeapon = {
+                        name: String(context.weapon.name || '').slice(0, 100),
+                        competence: String(context.weapon.competence || '').slice(0, 30),
+                        damage: Number(context.weapon.damage) || 0,
+                        injury: String(context.weapon.injury || '').slice(0, 50),
+                        load: Number(context.weapon.load) || 0
+                    };
+                }
+            }
+
+            const room = currentUserObj.room;
             const senderName = socket.user.username; // Usa el usuario logueado
-            const senderStance = stance || currentUserObj?.stance || 'Posición abierta';
+            const senderStance = currentUserObj.stance || 'Posición abierta';
 
             const d12Results = Array.from({ length: d12Count }, () => Math.floor(Math.random() * 12) + 1);
             const d6Results = Array.from({ length: d6Count }, () => Math.floor(Math.random() * 6) + 1);
-            const total = [...d12Results, ...d6Results].reduce((a, b) => a + b, 0);
+            const d12Value = featDiceMode === 'normal' || d12Results.length < 2
+                ? d12Results.reduce((a, b) => a + b, 0)
+                : d12Results.reduce((a, b) => featDiceMode === 'worst'
+                    ? (a === 11 || b === 12 ? a : (b === 11 || a === 12 ? b : Math.min(a, b)))
+                    : (a === 12 || b === 11 ? a : (b === 12 || a === 11 ? b : Math.max(a, b))));
+            const total = d12Value + d6Results.reduce((a, b) => a + b, 0) + modifier;
+            if (targetNumber !== undefined) outcome = total >= targetNumber ? 'success' : 'failure';
 
             const rollEntry = {
                 room,
@@ -492,7 +571,21 @@ io.on('connection', (socket) => {
                 d12Results,
                 d6Results,
                 total,
-                timestamp: new Date().toLocaleTimeString()
+                timestamp: new Date().toLocaleTimeString(),
+                adventurerId: context?.adventurerId || '',
+                adventurerName,
+                rollType: context?.type || '',
+                actionKey: context?.sourceKey || '',
+                actionLabel: context?.label || '',
+                targetNumber,
+                modifier,
+                hopeSpent: Boolean(context?.hopeSpent),
+                weary: Boolean(context?.weary),
+                illFavoured: Boolean(context?.illFavoured),
+                featDiceMode,
+                effectiveFeatDie: d12Value,
+                outcome,
+                weapon: safeWeapon
             };
 
             await Roll.create(rollEntry);

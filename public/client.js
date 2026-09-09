@@ -66,6 +66,7 @@ let currentRoom = "";
 let currentStance = "Posición abierta";
 let currentD12Count = 1;
 let currentD6Count = 0;
+let currentRollMode = 'manual';
 
 // Persistence helpers for last session
 const LAST_USER_KEY = 'rpg_last_username';
@@ -97,6 +98,19 @@ const d6IncBtn = document.getElementById('d6-inc-btn');
 const d6VisualPreview = document.getElementById('d6-visual-preview');
 const rollBtn = document.getElementById('roll-btn');
 const rollBtnLabel = document.getElementById('roll-btn-label');
+const rollModeButtons = document.querySelectorAll('[data-roll-mode]');
+const guidedRollPanel = document.getElementById('guided-roll-panel');
+const manualRollControls = document.getElementById('manual-roll-controls');
+const guidedRollSheetNote = document.getElementById('guided-roll-sheet-note');
+const guidedRollSource = document.getElementById('guided-roll-source');
+const guidedRollModifier = document.getElementById('guided-roll-modifier');
+const guidedRollTarget = document.getElementById('guided-roll-target');
+const guidedRollTargetField = document.querySelector('.guided-roll-target-field');
+const guidedRollHope = document.getElementById('guided-roll-hope');
+const guidedRollWeary = document.getElementById('guided-roll-weary');
+const guidedRollIllFavoured = document.getElementById('guided-roll-ill-favoured');
+const guidedRollPreview = document.getElementById('guided-roll-preview');
+const guidedRollConfirm = document.getElementById('guided-roll-confirm');
 
 const historyList = document.getElementById('history-list');
 const roomList = document.getElementById('room-list');
@@ -246,7 +260,8 @@ function fillAdventurerForm() { updateCalculatedFields(); renderSheetDynamicFiel
 function saveAdventurer() { localStorage.setItem(ADVENTURER_KEY, JSON.stringify(adventurer)); const status = document.getElementById('adventurer-save-status'); if (status) status.textContent = 'Borrador guardado en este dispositivo. Pulsa Guardar para sincronizarlo.'; }
 function normalizeAdventurerSheet(sheet, trancos = false) {
     const base = newAdventurer();
-    const normalized = { ...base, ...sheet, trancos: Boolean(sheet?.trancos ?? trancos), creation: { ...base.creation, ...sheet?.creation }, estados: { ...base.estados, ...sheet?.estados }, sombra: { ...base.sombra, ...sheet?.sombra }, desarrollo: { ...base.desarrollo, ...sheet?.desarrollo }, inventario: { ...base.inventario, ...sheet?.inventario } };
+    const normalized = { ...base, ...sheet, trancos: Boolean(sheet?.trancos ?? trancos), creation: { ...base.creation, ...sheet?.creation }, atributos: { ...base.atributos, ...sheet?.atributos }, estadisticas: { ...base.estadisticas, ...sheet?.estadisticas }, estados: { ...base.estados, ...sheet?.estados }, sombra: { ...base.sombra, ...sheet?.sombra }, desarrollo: { ...base.desarrollo, ...sheet?.desarrollo }, inventario: { ...base.inventario, ...sheet?.inventario }, combate: { ...base.combate, ...sheet?.combate, competencias: { ...base.combate.competencias, ...sheet?.combate?.competencias } } };
+    normalized.combate.equipoGuerra = (sheet?.combate?.equipoGuerra || base.combate.equipoGuerra).map(gear => ({ ...newWarGearItem(), ...gear, item: { ...newWarGearItem().item, ...gear?.item, competencia: normalizeCombatKey(gear?.item?.competencia) } }));
     ['virtudes', 'recompensas'].forEach(key => {
         if (Array.isArray(normalized.desarrollo[key])) normalized.desarrollo[key] = normalized.desarrollo[key].join('\n');
     });
@@ -256,6 +271,11 @@ function normalizeAdventurerSheet(sheet, trancos = false) {
 function shadowPathForOccupation() {
     const fallback = { 'Buscador de tesoros': 'Mal del dragón', 'Campeón': 'Maldición de la venganza', 'Capitán': 'Atracción del poder', 'Erudito': 'Atracción de los secretos', 'Guardián': 'Camino de la desesperación', 'Mensajero': 'Locura del trotamundos' };
     return getOccupationByName(adventurer.informacionGeneral.ocupacion)?.shadowPath || fallback[adventurer.informacionGeneral.ocupacion] || '';
+}
+function normalizeCombatKey(value) {
+    const normalized = String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const aliases = { hacha: 'hachas', hachas: 'hachas', arco: 'arcos', arcos: 'arcos', lanza: 'lanzas', lanzas: 'lanzas', espada: 'espadas', espadas: 'espadas', pelea: 'pelea' };
+    return aliases[normalized] || normalized;
 }
 function currentShieldParryModifier() { return (adventurer.combate?.equipoGuerra || []).reduce((total, gear) => total + Number(gear.item?.modificadorParada || 0), 0); }
 function updateCalculatedFields() {
@@ -435,7 +455,7 @@ function selectedEquipmentItems(equipment) {
     const items = [];
     Object.entries(equipment?.weapons || {}).forEach(([skill, id]) => {
         const item = equipmentCatalog.weapons.find(weapon => weapon.id === id);
-        if (item) items.push({ item: { tipoItem: 'Arma', nombre: item.name, subtipoItem: '', dano: item.damage, herida: item.injury, carga: item.load, competencia: displayName(skill), notas: item.notes || '', modificadorParada: 0 } });
+        if (item) items.push({ item: { tipoItem: 'Arma', nombre: item.name, subtipoItem: '', dano: item.damage, herida: item.injury, carga: item.load, competencia: normalizeCombatKey(skill), notas: item.notes || '', modificadorParada: 0 } });
     });
     const armor = equipmentCatalog.armor.find(item => item.id === equipment?.armor);
     if (armor) items.push({ item: { tipoItem: 'Armadura', nombre: armor.name, subtipoItem: armor.type, dano: 0, herida: '', carga: armor.load, competencia: '', notas: `Protección: ${armor.protection}`, modificadorParada: 0 } });
@@ -743,6 +763,7 @@ function renderAdventurerSelects() {
     const options = savedAdventurers.map(item => `<option value="${item._id}">${item.nombre}</option>`).join('');
     if (sheetLibrarySelect) sheetLibrarySelect.innerHTML = `<option value="">Hojas guardadas…</option>${options}`;
     if (adventurerSelect) { adventurerSelect.innerHTML = `<option value="">Sin personaje asignado</option>${options}`; adventurerSelect.value = assignedAdventurerId; }
+    refreshGuidedRollAvailability(true);
 }
 async function fetchAdventurers() {
     if (isLocalFile) return renderAdventurerSelects();
@@ -755,6 +776,189 @@ async function fetchAdventurers() {
     }
     catch (_) { const status = document.getElementById('adventurer-save-status'); if (status) status.textContent = 'No se pudo conectar con la base de datos.'; }
 }
+
+const guidedSkillCatalog = Object.entries(cultureSkillGroups).flatMap(([attribute, skills]) => skills.map(key => ({ key, attribute })));
+
+function getAssignedAdventurerForRoll() {
+    const record = savedAdventurers.find(item => item._id === assignedAdventurerId);
+    if (!record) return null;
+    const sheet = normalizeAdventurerSheet(record.ficha, record.trancos);
+    sheet._id = record._id;
+    return { record, sheet };
+}
+
+function rollModifierValue(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.max(-10, Math.min(10, Math.trunc(parsed))) : 0;
+}
+
+function prepareSkillRoll(sheet, skillKey, modifiers = {}) {
+    const definition = guidedSkillCatalog.find(skill => skill.key === skillKey);
+    const skill = definition && sheet?.habilidades?.[definition.attribute]?.[skillKey];
+    const attribute = definition && sheet?.atributos?.[definition.attribute];
+    if (!definition || !skill || !attribute) return null;
+    const favored = Boolean(skill.favorecida);
+    const illFavoured = Boolean(modifiers.illFavoured);
+    const hopeSpent = Boolean(modifiers.hopeSpent);
+    const hopeBonus = hopeSpent ? Math.max(0, Number(attribute.valor) || 0) : 0;
+    const baseTarget = sheet.trancos ? 18 : 20;
+    return {
+        adventurerId: String(sheet._id || ''),
+        adventurerName: sheet.informacionGeneral?.nombre || 'Aventurero',
+        type: 'skill',
+        sourceKey: skillKey,
+        label: displayName(skillKey),
+        attributeKey: definition.attribute,
+        attributeValue: Number(attribute.valor) || 0,
+        featDice: illFavoured || favored ? 2 : 1,
+        successDice: Math.max(0, Math.min(6, Math.trunc(Number(skill.rango) || 0))),
+        targetNumber: Math.max(0, Number.isFinite(Number(attribute.tn)) ? Number(attribute.tn) : baseTarget - (Number(attribute.valor) || 0)),
+        hopeSpent,
+        hopeBonus,
+        modifier: rollModifierValue(modifiers.modifier) + hopeBonus,
+        weary: Boolean(modifiers.weary),
+        illFavoured,
+        featDiceMode: illFavoured ? 'worst' : (favored ? 'best' : 'normal'),
+        weapon: null
+    };
+}
+
+function prepareWeaponRoll(sheet, gearIndex, modifiers = {}) {
+    const gear = sheet?.combate?.equipoGuerra?.[Number(gearIndex)];
+    const item = gear?.item;
+    const competenceKey = normalizeCombatKey(item?.competencia);
+    const rank = Number(sheet?.combate?.competencias?.[competenceKey] || 0);
+    if (!item?.nombre || !competenceKey || rank <= 0) return null;
+    const hopeSpent = Boolean(modifiers.hopeSpent);
+    const attribute = sheet?.atributos?.fuerza || {};
+    const hopeBonus = hopeSpent ? Math.max(0, Number(attribute.valor) || 0) : 0;
+    const weapon = {
+        name: item.nombre,
+        competence: competenceKey,
+        damage: Number(item.dano) || 0,
+        injury: item.herida || '',
+        load: Number(item.carga) || 0,
+        notes: item.notas || ''
+    };
+    return {
+        adventurerId: String(sheet._id || ''),
+        adventurerName: sheet.informacionGeneral?.nombre || 'Aventurero',
+        type: 'attack',
+        sourceKey: competenceKey,
+        gearIndex: Number(gearIndex),
+        label: item.nombre,
+        attributeKey: 'fuerza',
+        attributeValue: Number(attribute.valor) || 0,
+        featDice: Boolean(modifiers.illFavoured) ? 2 : 1,
+        successDice: Math.max(0, Math.min(6, Math.trunc(rank))),
+        targetNumber: Math.max(0, Math.min(99, Number(modifiers.targetNumber) || 15)),
+        hopeSpent,
+        hopeBonus,
+        modifier: rollModifierValue(modifiers.modifier) + hopeBonus,
+        weary: Boolean(modifiers.weary),
+        illFavoured: Boolean(modifiers.illFavoured),
+        featDiceMode: modifiers.illFavoured ? 'worst' : 'normal',
+        weapon
+    };
+}
+
+window.prepareSkillRoll = prepareSkillRoll;
+window.prepareWeaponRoll = prepareWeaponRoll;
+
+function getGuidedRollModifiers() {
+    return {
+        modifier: rollModifierValue(guidedRollModifier?.value),
+        targetNumber: Math.max(0, Math.min(99, Number(guidedRollTarget?.value) || 15)),
+        hopeSpent: Boolean(guidedRollHope?.checked),
+        weary: Boolean(guidedRollWeary?.checked),
+        illFavoured: Boolean(guidedRollIllFavoured?.checked)
+    };
+}
+
+function validWeaponChoices(sheet) {
+    return (sheet?.combate?.equipoGuerra || []).map((gear, index) => {
+        const item = gear?.item || {};
+        const competence = normalizeCombatKey(item.competencia);
+        const rank = Number(sheet?.combate?.competencias?.[competence] || 0);
+        return item.nombre && competence && rank > 0 ? { index, item, competence, rank } : null;
+    }).filter(Boolean);
+}
+
+function renderGuidedRollSourceOptions() {
+    const selected = getAssignedAdventurerForRoll();
+    if (!guidedRollSource || !selected) return;
+    const options = currentRollMode === 'skill'
+        ? guidedSkillCatalog.map(skill => `<option value="${skill.key}">${displayName(skill.key)} · ${displayName(skill.attribute)}</option>`)
+        : validWeaponChoices(selected.sheet).map(weapon => `<option value="${weapon.index}">${escapeHtml(weapon.item.nombre)} · ${displayName(weapon.competence)} ${weapon.rank}</option>`);
+    guidedRollSource.innerHTML = options.length ? options.join('') : '<option value="">No hay opciones válidas</option>';
+    guidedRollSource.disabled = !options.length;
+    if (guidedRollTargetField) guidedRollTargetField.classList.toggle('d-none', currentRollMode !== 'attack');
+    renderGuidedRollPreview();
+}
+
+function renderGuidedRollPreview() {
+    const selected = getAssignedAdventurerForRoll();
+    if (!guidedRollPreview || !guidedRollConfirm) return;
+    if (!selected || !guidedRollSource?.value) {
+        guidedRollPreview.innerHTML = '<span class="text-muted">No hay una acción preparada con la ficha seleccionada.</span>';
+        guidedRollConfirm.disabled = true;
+        return;
+    }
+    const modifiers = getGuidedRollModifiers();
+    const request = currentRollMode === 'skill'
+        ? prepareSkillRoll(selected.sheet, guidedRollSource.value, modifiers)
+        : prepareWeaponRoll(selected.sheet, guidedRollSource.value, modifiers);
+    if (!request) {
+        guidedRollPreview.innerHTML = '<span class="text-muted">La acción seleccionada no tiene datos suficientes.</span>';
+        guidedRollConfirm.disabled = true;
+        return;
+    }
+    const modifierText = request.modifier ? ` ${request.modifier >= 0 ? '+' : '−'} ${Math.abs(request.modifier)}` : '';
+    const diceText = `${request.featDice}d12 + ${request.successDice}d6`;
+    const stateText = [request.hopeSpent ? `Esperanza +${request.hopeBonus}` : '', request.weary ? 'Cansado' : '', request.illFavoured ? 'Desfavorecido' : ''].filter(Boolean).join(' · ');
+    const weaponText = request.weapon ? ` · Daño ${escapeHtml(request.weapon.damage)} · Herida ${escapeHtml(request.weapon.injury)}` : '';
+    guidedRollPreview.innerHTML = `<strong>${escapeHtml(request.adventurerName)} intenta ${escapeHtml(request.label)}</strong><span>${diceText}${modifierText} contra NO ${request.targetNumber}${weaponText}</span>${stateText ? `<small>${escapeHtml(stateText)}</small>` : ''}`;
+    guidedRollConfirm.disabled = false;
+    guidedRollConfirm.dataset.request = JSON.stringify(request);
+}
+
+function resetGuidedRollState() {
+    const selected = getAssignedAdventurerForRoll();
+    if (guidedRollModifier) guidedRollModifier.value = '0';
+    if (guidedRollTarget) guidedRollTarget.value = '15';
+    if (guidedRollHope) guidedRollHope.checked = false;
+    if (guidedRollWeary) guidedRollWeary.checked = Boolean(selected?.sheet?.estados?.cansado);
+    if (guidedRollIllFavoured) guidedRollIllFavoured.checked = Boolean(selected?.sheet?.estados?.desanimado);
+}
+
+function refreshGuidedRollAvailability(resetState = false) {
+    const hasSheet = Boolean(getAssignedAdventurerForRoll());
+    rollModeButtons.forEach(button => { if (button.dataset.rollMode !== 'manual') button.disabled = !hasSheet; });
+    if (!hasSheet && currentRollMode !== 'manual') setRollMode('manual');
+    if (guidedRollSheetNote) guidedRollSheetNote.textContent = hasSheet ? `Ficha seleccionada: ${getAssignedAdventurerForRoll().sheet.informacionGeneral?.nombre || 'Sin nombre'}` : 'Selecciona un personaje en la sala para preparar tiradas.';
+    if (resetState) resetGuidedRollState();
+    if (currentRollMode !== 'manual') renderGuidedRollSourceOptions();
+}
+
+function setRollMode(mode) {
+    if (mode !== 'manual' && !getAssignedAdventurerForRoll()) mode = 'manual';
+    currentRollMode = mode;
+    rollModeButtons.forEach(button => {
+        const active = button.dataset.rollMode === mode;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    const guided = mode !== 'manual';
+    guidedRollPanel?.classList.toggle('d-none', !guided);
+    manualRollControls?.classList.toggle('d-none', guided);
+    if (guided) renderGuidedRollSourceOptions();
+}
+
+rollModeButtons.forEach(button => button.addEventListener('click', () => setRollMode(button.dataset.rollMode)));
+guidedRollSource?.addEventListener('change', renderGuidedRollPreview);
+[guidedRollModifier, guidedRollTarget, guidedRollHope, guidedRollWeary, guidedRollIllFavoured].forEach(input => input?.addEventListener('input', renderGuidedRollPreview));
+[guidedRollHope, guidedRollWeary, guidedRollIllFavoured].forEach(input => input?.addEventListener('change', renderGuidedRollPreview));
+
 async function saveAdventurerToDatabase() {
     if (isLocalFile) { appAlert('Abre la aplicación desde el servidor para guardar fichas en la base de datos.'); return; }
     if (!adventurer.informacionGeneral.nombre.trim()) {
@@ -816,7 +1020,7 @@ resetAdventurerBtn.addEventListener('click', async () => { if (await appConfirm(
 adventurerImport.addEventListener('change', event => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { adventurer = normalizeAdventurerSheet(JSON.parse(reader.result)); calculatedOverrides = new Set(calculatedEditablePaths); adventurerId = null; saveAdventurer(); fillAdventurerForm(); } catch (_) { appAlert('El archivo no contiene un JSON de aventurero válido.', 'Importación no válida'); } }; reader.readAsText(file); event.target.value = ''; });
 saveAdventurerBtn.addEventListener('click', saveAdventurerToDatabase);
 sheetLibrarySelect.addEventListener('change', event => { const record = savedAdventurers.find(item => item._id === event.target.value); if (!record) return; adventurer = normalizeAdventurerSheet(record.ficha, record.trancos); adventurerId = record._id; setShadowPathFromOccupation(); saveAdventurer(); fillAdventurerForm(); });
-adventurerSelect.addEventListener('change', event => { assignedAdventurerId = event.target.value; localStorage.setItem('tor_assigned_adventurer', assignedAdventurerId); const record = savedAdventurers.find(item => item._id === assignedAdventurerId); if (!isLocalFile && currentRoom) socket.emit('update-user', { username: currentUser, stance: currentStance, adventurerId: assignedAdventurerId, adventurerName: record?.nombre || '' }); else renderLocalActiveUsers(); });
+adventurerSelect.addEventListener('change', event => { assignedAdventurerId = event.target.value; localStorage.setItem('tor_assigned_adventurer', assignedAdventurerId); const record = savedAdventurers.find(item => item._id === assignedAdventurerId); refreshGuidedRollAvailability(true); if (!isLocalFile && currentRoom) socket.emit('update-user', { username: currentUser, stance: currentStance, adventurerId: assignedAdventurerId, adventurerName: record?.nombre || '' }); else renderLocalActiveUsers(); });
 
 // ==========================================
 // DICE SELECTION LOGIC (D12: 1-2, D6: 0-6)
@@ -1104,42 +1308,58 @@ joinBtn.addEventListener('click', () => {
     appScreen.classList.remove('d-none');
 });
 
-// Roll Dice
-rollBtn.addEventListener('click', () => {
-    const d12Count = currentD12Count;
-    const d6Count = currentD6Count;
+function featDieSortValue(value) { return value === 11 ? -1 : (value === 12 ? 13 : value); }
 
-    const rollData = {
-        room: currentRoom,
+function calculatePreparedTotal(d12Results, d6Results, request) {
+    const d6Total = d6Results.reduce((total, value) => total + value, 0);
+    if (!request || request.featDiceMode === 'normal' || d12Results.length < 2) {
+        return d12Results.reduce((total, value) => total + value, 0) + d6Total + Number(request?.modifier || 0);
+    }
+    const selected = request.featDiceMode === 'worst'
+        ? d12Results.reduce((a, b) => featDieSortValue(a) < featDieSortValue(b) ? a : b)
+        : d12Results.reduce((a, b) => featDieSortValue(a) > featDieSortValue(b) ? a : b);
+    return selected + d6Total + Number(request.modifier || 0);
+}
+
+function localRoll(request = null) {
+    const d12Count = request?.featDice || currentD12Count;
+    const d6Count = request?.successDice ?? currentD6Count;
+    const d12Results = Array.from({ length: d12Count }, () => Math.floor(Math.random() * 12) + 1);
+    const d6Results = Array.from({ length: d6Count }, () => Math.floor(Math.random() * 6) + 1);
+    const total = calculatePreparedTotal(d12Results, d6Results, request);
+    return {
+        id: Date.now(),
         user: currentUser,
         stance: currentStance,
-        d12Count,
-        d6Count
+        d12Results,
+        d6Results,
+        total,
+        timestamp: new Date().toLocaleTimeString(),
+        ...(request ? { adventurerId: request.adventurerId, adventurerName: request.adventurerName, rollType: request.type, actionKey: request.sourceKey, actionLabel: request.label, targetNumber: request.targetNumber, modifier: request.modifier, hopeSpent: request.hopeSpent, weary: request.weary, illFavoured: request.illFavoured, featDiceMode: request.featDiceMode, effectiveFeatDie: request.featDiceMode === 'normal' ? d12Results[0] : (request.featDiceMode === 'worst' ? d12Results.reduce((a, b) => featDieSortValue(a) < featDieSortValue(b) ? a : b) : d12Results.reduce((a, b) => featDieSortValue(a) > featDieSortValue(b) ? a : b)), outcome: total >= request.targetNumber ? 'success' : 'failure', weapon: request.weapon } : {})
     };
+}
 
+function executeRoll(request = null) {
+    if (request && !currentRoom) return;
+    const d12Count = request?.featDice || currentD12Count;
+    const d6Count = request?.successDice ?? currentD6Count;
+    const rollData = { room: currentRoom, user: currentUser, stance: currentStance, d12Count, d6Count, rollContext: request };
     if (isLocalFile) {
-        // Mock roll logic
-        const d12Results = Array.from({ length: d12Count }, () => Math.floor(Math.random() * 12) + 1);
-        const d6Results = Array.from({ length: d6Count }, () => Math.floor(Math.random() * 6) + 1);
-        const total = [...d12Results, ...d6Results].reduce((a, b) => a + b, 0);
-        const rollEntry = {
-            id: Date.now(),
-            user: currentUser,
-            stance: currentStance,
-            d12Results,
-            d6Results,
-            total,
-            timestamp: new Date().toLocaleTimeString()
-        };
+        const rollEntry = localRoll(request);
         saveLocalHistory(currentRoom, rollEntry);
-        // Remove empty message if present
-        const emptyMsg = document.querySelector('.empty-msg');
-        if (emptyMsg) emptyMsg.remove();
+        document.querySelector('.empty-msg')?.remove();
         addRollToUI(rollEntry, true);
         scrollToBottom();
     } else {
         socket.emit('roll-dice', rollData);
     }
+}
+
+// Roll Dice
+rollBtn.addEventListener('click', () => executeRoll());
+guidedRollConfirm?.addEventListener('click', () => {
+    try { executeRoll(JSON.parse(guidedRollConfirm.dataset.request || 'null')); }
+    catch (_) { appAlert('No se pudo preparar esta tirada.', 'Tirada no válida'); }
 });
 
 // Clear History
@@ -1282,6 +1502,10 @@ socket.on('connect_error', (err) => {
     console.error("Error de conexión:", err.message);
 });
 
+socket.on('roll-error', (message) => {
+    appAlert(message || 'No se pudo lanzar la tirada.', 'Tirada no válida');
+});
+
 socket.on('disconnect', () => {
     console.warn("Desconectado del servidor");
 });
@@ -1375,7 +1599,21 @@ function addRollToUI(roll, isNew) {
         return `<span class="badge stance-badge ${info.className} ms-2" style="font-size: 0.7rem; font-weight: normal;"><i class="${info.icon} me-1"></i>${info.short}</span>`;
     })() : '';
 
-    const totalsMarkup = d12Results.length === 2
+    const isContextualRoll = Boolean(roll.rollType && roll.actionLabel);
+    const outcomeLabel = roll.outcome === 'success' ? 'ÉXITO' : (roll.outcome === 'failure' ? 'FALLO' : 'RESULTADO');
+    const outcomeClass = roll.outcome === 'success' ? 'text-success' : (roll.outcome === 'failure' ? 'text-danger' : '');
+    const contextualDetails = isContextualRoll
+        ? `<div class="roll-context-line"><strong>${escapeHtml(roll.adventurerName || roll.user)} · ${escapeHtml(roll.actionLabel)}</strong>${roll.weapon ? ` <span>· Daño ${escapeHtml(roll.weapon.damage)} · Herida ${escapeHtml(roll.weapon.injury)}</span>` : ''}<span class="text-muted"> · ${roll.total} contra NO ${roll.targetNumber}</span></div>`
+        : '';
+
+    const totalsMarkup = isContextualRoll
+        ? `
+            <div class="total-badge ${roll.outcome === 'success' ? 'border-success' : (roll.outcome === 'failure' ? 'border-danger' : '')}">
+                <span class="total-val ${outcomeClass}">${roll.total}</span>
+                <span class="total-label ${outcomeClass}">${outcomeLabel}</span>
+            </div>
+        `
+        : d12Results.length === 2
         ? `
             <div class="total-badge border-success">
                 <span class="total-val text-success">${maxD12 + d6Total}</span>
@@ -1397,10 +1635,11 @@ function addRollToUI(roll, isNew) {
         <div class="d-flex justify-content-between align-items-start">
             <div class="flex-grow-1">
                 <div class="fw-bold text-dark mb-1 d-flex align-items-center flex-wrap">
-                    <span>${roll.user}</span>
+                    <span>${escapeHtml(roll.user)}</span>
                     ${stancePill}
                     <span class="text-muted fw-normal ms-2" style="font-size: 0.75rem;">${roll.timestamp}</span>
                 </div>
+                ${contextualDetails}
                 ${d12Str}
                 ${d6Str}
             </div>

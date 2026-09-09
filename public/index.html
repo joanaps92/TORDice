@@ -381,6 +381,31 @@
                         <h3 class="mb-0 section-title"><i class="fa-solid fa-dice-d20 me-2 text-danger"></i>Preparar Tirada</h3>
                         <span class="tor-badge-rule small">TIRADA DE ACCIÓN</span>
                     </div>
+
+                    <div class="roll-mode-switch mb-3" role="tablist" aria-label="Modo de preparación de tirada">
+                        <button type="button" class="btn roll-mode-btn" data-roll-mode="skill" role="tab" disabled><i class="fa-solid fa-person-running me-1"></i>Habilidad</button>
+                        <button type="button" class="btn roll-mode-btn" data-roll-mode="attack" role="tab" disabled><i class="fa-solid fa-swords me-1"></i>Ataque</button>
+                        <button type="button" class="btn roll-mode-btn active" data-roll-mode="manual" role="tab"><i class="fa-solid fa-sliders me-1"></i>Manual</button>
+                    </div>
+
+                    <div id="guided-roll-panel" class="guided-roll-panel d-none mb-3">
+                        <div class="guided-roll-sheet-note" id="guided-roll-sheet-note">Selecciona un personaje en la sala para preparar tiradas.</div>
+                        <label class="form-label small fw-bold" for="guided-roll-source">Acción</label>
+                        <select id="guided-roll-source" class="form-select tor-select mb-3"></select>
+                        <div class="guided-roll-options">
+                            <label class="small">Modificador circunstancial<input id="guided-roll-modifier" class="form-control form-control-sm tor-input" type="number" min="-10" max="10" value="0"></label>
+                            <label class="small guided-roll-target-field d-none">NO objetivo<input id="guided-roll-target" class="form-control form-control-sm tor-input" type="number" min="0" max="99" value="15"></label>
+                        </div>
+                        <div class="guided-roll-checks mt-3">
+                            <label><input id="guided-roll-hope" type="checkbox"> Esperanza</label>
+                            <label><input id="guided-roll-weary" type="checkbox"> Cansado</label>
+                            <label><input id="guided-roll-ill-favoured" type="checkbox"> Desfavorecido</label>
+                        </div>
+                        <div id="guided-roll-preview" class="guided-roll-preview mt-3"></div>
+                        <button id="guided-roll-confirm" type="button" class="btn btn-tor-primary w-100 mt-3"><i class="fa-solid fa-dice me-2"></i>Confirmar y lanzar</button>
+                    </div>
+
+                    <div id="manual-roll-controls">
                     
                     <!-- D12 Selector (1 o 2) -->
                     <div class="dice-selector-card mb-3 p-3 rounded shadow-sm">
@@ -441,6 +466,7 @@
                     <button id="roll-btn" class="btn btn-tor-primary btn-lg w-100 fw-bold mt-auto shadow-sm py-3">
                         <i class="fa-solid fa-hand-fist me-2"></i><span id="roll-btn-label">¡LANZAR DADOS! (1 D12)</span>
                     </button>
+                    </div>
                 </div>
             </div>
 
