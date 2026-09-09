@@ -120,9 +120,11 @@ const playersDefensiva = document.getElementById('players-defensiva');
 const playersRetaguardia = document.getElementById('players-retaguardia');
 const battleZones = document.querySelectorAll('.battle-stance-zone');
 
-// Culture catalog imported from guia-creacion-personajes.
+// Culture and occupation catalogs imported from guia-creacion-personajes.
 let cultures = [];
 let culturesPromise = null;
+let occupations = [];
+let occupationsPromise = null;
 const cultureSkillGroups = {
     fuerza: ['impresionar', 'atletismo', 'alerta', 'cazar', 'cantar', 'oficio'],
     corazon: ['alentar', 'viajar', 'perspicacia', 'curar', 'cortesia', 'guerrear'],
@@ -131,6 +133,7 @@ const cultureSkillGroups = {
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
 const getCultureById = id => cultures.find(culture => culture.id === id) || null;
 const getCultureByName = name => cultures.find(culture => culture.name === name) || null;
+const getOccupationByName = name => occupations.find(occupation => occupation.name === name) || null;
 
 async function loadCultures() {
     if (culturesPromise) return culturesPromise;
@@ -139,6 +142,15 @@ async function loadCultures() {
         .then(data => { cultures = data; renderCultureSelectors(); return cultures; })
         .catch(error => { console.error(error); cultures = []; return cultures; });
     return culturesPromise;
+}
+
+async function loadOccupations() {
+    if (occupationsPromise) return occupationsPromise;
+    occupationsPromise = fetch('/data/ocupaciones.json')
+        .then(response => { if (!response.ok) throw new Error('No se pudieron cargar las ocupaciones'); return response.json(); })
+        .then(data => { occupations = data; return occupations; })
+        .catch(error => { console.error(error); occupations = []; return occupations; });
+    return occupationsPromise;
 }
 
 function renderCultureSelectors() {
@@ -180,7 +192,7 @@ let calculatedOverrides = new Set();
 const newAdventurer = () => ({
     _id: null,
     trancos: false,
-    creation: { version: 1, cultureId: '', attributeRoll: null, favoredSkills: [], combatProficiencies: {}, distinctiveFeatures: [], completed: false },
+    creation: { version: 1, cultureId: '', attributeRoll: null, favoredSkills: [], occupationFavoredSkills: [], combatProficiencies: {}, distinctiveFeatures: [], occupationDistinctiveFeature: '', completed: false },
     informacionGeneral: { nombre: '', culturaHeroica: '', ocupacion: '', nivelDeVida: '', edad: 0, bendicionCultural: '', heredero: '' },
     atributos: { fuerza: { valor: 0, tn: 20 }, corazon: { valor: 0, tn: 20 }, mente: { valor: 0, tn: 20 } },
     estadisticas: { aguante: { maximo: 0, actual: 0 }, esperanza: { maxima: 0, actual: 0 }, parada: 0, cargaTotal: 0, fatiga: 0 },
@@ -218,8 +230,8 @@ function normalizeAdventurerSheet(sheet, trancos = false) {
     return normalized;
 }
 function shadowPathForOccupation() {
-    const paths = { 'Buscador de tesoros': 'Mal del dragón', 'Campeón': 'Maldición de la venganza', 'Capitán': 'Atracción del poder', 'Erudito': 'Atracción de los secretos', 'Guardián': 'Camino de la desesperación', 'Mensajero': 'Locura del trotamundos' };
-    return paths[adventurer.informacionGeneral.ocupacion] || '';
+    const fallback = { 'Buscador de tesoros': 'Mal del dragón', 'Campeón': 'Maldición de la venganza', 'Capitán': 'Atracción del poder', 'Erudito': 'Atracción de los secretos', 'Guardián': 'Camino de la desesperación', 'Mensajero': 'Locura del trotamundos' };
+    return getOccupationByName(adventurer.informacionGeneral.ocupacion)?.shadowPath || fallback[adventurer.informacionGeneral.ocupacion] || '';
 }
 function updateCalculatedFields() {
     const attributeTarget = adventurer.trancos ? 18 : 20;
@@ -259,7 +271,7 @@ let guidedStep = 0;
 const guidedStepCount = 8;
 const guidedOccupations = ['Buscador de tesoros', 'Campeón', 'Capitán', 'Erudito', 'Guardián', 'Mensajero'];
 const guidedSelectOptions = options => options.map(option => `<option value="${option}">${option}</option>`).join('');
-let guidedDraft = { cultureId: '', attributeRoll: null, favoredSkills: [], combatProficiencies: {}, distinctiveFeatures: [] };
+let guidedDraft = { cultureId: '', attributeRoll: null, favoredSkills: [], occupationFavoredSkills: [], combatProficiencies: {}, distinctiveFeatures: [], occupationTraitOption: '' };
 
 function guidedField(path, label, type = 'text', extra = '') {
     return `<label class="guided-field">${label}<input class="form-control tor-input" type="${type}" data-guided-path="${path}" ${extra}></label>`;
@@ -279,9 +291,25 @@ function renderAttributeChoices(culture) {
 }
 
 function renderFavoredChoices(culture) {
-    if (!culture) return '<div class="guided-intro"><p>Selecciona primero una cultura.</p></div>';
-    if (!guidedDraft.favoredSkills.length) guidedDraft.favoredSkills = [...culture.favoredSkillsChoices];
-    return `<div class="guided-intro"><i class="fa-solid fa-star"></i><p>Marca las habilidades favorecidas que quieres trasladar a la ficha. Puedes dejar seleccionadas las opciones de la cultura.</p></div><div class="guided-choice-list">${culture.favoredSkillsChoices.map(skill => `<label><input type="checkbox" data-guided-favored="${skill}" ${guidedDraft.favoredSkills.includes(skill) ? 'checked' : ''}> <span>${displayName(skill)}</span></label>`).join('')}</div>`;
+    const occupation = getOccupationByName(adventurer.informacionGeneral.ocupacion);
+    if (!culture || !occupation) return '<div class="guided-intro"><p>Selecciona primero la cultura y la ocupación.</p></div>';
+    const selected = guidedDraft.occupationFavoredSkills || [];
+    const trait = occupation.distinctiveFeature;
+    const traitControl = trait.options
+        ? `<label class="guided-field occupation-trait-field">Tipo de enemigo para «${escapeHtml(trait.name)}»<select class="form-select tor-select" data-guided-occupation-trait aria-required="true"><option value="">Selecciona un enemigo…</option>${trait.options.map(option => `<option value="${escapeHtml(option)}" ${option === guidedDraft.occupationTraitOption ? 'selected' : ''}>${escapeHtml(option)}</option>`).join('')}</select></label>`
+        : '';
+    const cultureSkills = culture.favoredSkillsChoices.map(skill => displayName(skill)).join(' · ');
+    const occupationSkills = occupation.favoredSkillsChoices.map(skill => `<label class="guided-choice-list-item"><input type="checkbox" data-guided-favored="${skill}" ${selected.includes(skill) ? 'checked' : ''}> <span>${displayName(skill)}</span></label>`).join('');
+    return `<div class="guided-intro"><i class="fa-solid fa-star"></i><p>La cultura ya aporta como favorecidas: <strong>${escapeHtml(cultureSkills)}</strong>. Elige exactamente dos habilidades favorecidas de la ocupación.</p></div><div class="guided-choice-list">${occupationSkills}</div><p class="guided-selection-count">Seleccionadas de la ocupación: <strong>${selected.length}</strong> de 2</p><div class="occupation-trait-card"><strong>Rasgo distintivo adicional: ${escapeHtml(trait.name)}</strong><p>${escapeHtml(trait.description)}</p>${traitControl}</div>`;
+}
+
+function guidedFavoredSkills(culture) {
+    return [...new Set([...(culture?.favoredSkillsChoices || []), ...(guidedDraft.occupationFavoredSkills || [])])];
+}
+
+function occupationTraitLabel(occupation, option) {
+    if (!occupation?.distinctiveFeature) return '';
+    return option ? `${occupation.distinctiveFeature.name}: ${option}` : occupation.distinctiveFeature.name;
 }
 
 function renderCombatChoices(culture) {
@@ -304,7 +332,8 @@ function renderTraitChoices(culture) {
 function applyCultureToAdventurer(source, culture, options = {}) {
     const result = JSON.parse(JSON.stringify(source));
     const row = culture.attributesTable.find(item => item.roll === Number(options.attributeRoll)) || culture.attributesTable[0];
-    const favoredSkills = options.favoredSkills?.length ? options.favoredSkills : culture.favoredSkillsChoices;
+    const occupation = getOccupationByName(result.informacionGeneral.ocupacion);
+    const favoredSkills = options.favoredSkills?.length ? options.favoredSkills : [...new Set([...(culture.favoredSkillsChoices || []), ...(options.occupationFavoredSkills || [])])];
     const baseNO = result.trancos ? 18 : 20;
     const attributes = { fuerza: row.strength, corazon: row.heart, mente: row.mind };
     Object.entries(attributes).forEach(([key, value]) => { result.atributos[key].valor = value; result.atributos[key].tn = baseNO - value; });
@@ -324,8 +353,10 @@ function applyCultureToAdventurer(source, culture, options = {}) {
     result.estadisticas.parada = attributes.mente + culture.derivedStats.parryBonus;
     result.desarrollo.virtudes = (culture.virtues || []).map(virtue => `${virtue.title}: ${virtue.text}`).join('\n\n');
     const distinctiveFeatures = options.distinctiveFeatures || [];
-    result.rasgosDistintivos = [...distinctiveFeatures];
-    result.creation = { ...result.creation, version: 1, cultureId: culture.id, attributeRoll: row.roll, favoredSkills, combatProficiencies: options.combatProficiencies || {}, distinctiveFeatures: [...distinctiveFeatures], culturalShadowRule: culture.shadowRule, completed: true };
+    const occupationFeature = occupationTraitLabel(occupation, options.occupationTraitOption);
+    result.rasgosDistintivos = [...distinctiveFeatures, ...(occupationFeature ? [occupationFeature] : [])];
+    result.sombra.senda = occupation?.shadowPath || result.sombra.senda;
+    result.creation = { ...result.creation, version: 1, cultureId: culture.id, attributeRoll: row.roll, favoredSkills, occupationFavoredSkills: [...(options.occupationFavoredSkills || [])], combatProficiencies: options.combatProficiencies || {}, distinctiveFeatures: [...distinctiveFeatures], occupationDistinctiveFeature: occupationFeature, culturalShadowRule: culture.shadowRule, completed: true };
     return result;
 }
 
@@ -354,7 +385,7 @@ function renderGuidedStep() {
         },
         {
             title: 'Habilidades favorecidas',
-            subtitle: 'Resuelve las elecciones propias de la cultura.',
+            subtitle: 'Elige dos habilidades y completa el rasgo de la ocupación.',
             content: renderFavoredChoices(culture)
         },
         {
@@ -370,7 +401,7 @@ function renderGuidedStep() {
         {
             title: 'Confirmar creación',
             subtitle: 'Comprueba las elecciones antes de aplicar la cultura.',
-            content: `<div class="guided-summary"><div class="guided-summary-icon"><i class="fa-solid fa-scroll"></i></div><p>Se aplicará <strong>${escapeHtml(culture?.name || 'la cultura seleccionada')}</strong> a la ficha y todos los campos seguirán siendo editables.</p><div class="guided-summary-grid"><span>Fila de atributos</span><strong>${guidedDraft.attributeRoll || 'Pendiente'}</strong><span>Habilidades favorecidas</span><strong>${guidedDraft.favoredSkills.map(displayName).join(', ') || 'Ninguna'}</strong><span>Rasgos distintivos</span><strong>${guidedDraft.distinctiveFeatures.join(', ') || 'Pendientes'}</strong><span>Número objetivo</span><strong>Base ${adventurer.trancos ? 18 : 20}</strong></div></div>`
+            content: `<div class="guided-summary"><div class="guided-summary-icon"><i class="fa-solid fa-scroll"></i></div><p>Se aplicará <strong>${escapeHtml(culture?.name || 'la cultura seleccionada')}</strong> a la ficha y todos los campos seguirán siendo editables.</p><div class="guided-summary-grid"><span>Fila de atributos</span><strong>${guidedDraft.attributeRoll || 'Pendiente'}</strong><span>Habilidades favorecidas</span><strong>${guidedFavoredSkills(culture).map(displayName).join(', ') || 'Ninguna'}</strong><span>Rasgos distintivos</span><strong>${[...guidedDraft.distinctiveFeatures, occupationTraitLabel(getOccupationByName(adventurer.informacionGeneral.ocupacion), guidedDraft.occupationTraitOption)].filter(Boolean).join(', ') || 'Pendientes'}</strong><span>Número objetivo</span><strong>Base ${adventurer.trancos ? 18 : 20}</strong></div></div>`
         }
     ];
     const current = steps[guidedStep];
@@ -409,9 +440,14 @@ function updateGuidedValue(input) {
 }
 
 function validateGuidedStep() {
-    if (guidedStep === 0 || guidedStep === 4 || guidedStep === 5 || guidedStep === 7) return true;
+    if (guidedStep === 0 || guidedStep === 5 || guidedStep === 7) return true;
     if (guidedStep === 2 && !guidedDraft.cultureId) return false;
     if (guidedStep === 3 && !guidedDraft.attributeRoll) return false;
+    if (guidedStep === 4) {
+        if (guidedDraft.occupationFavoredSkills.length !== 2) return false;
+        if (getOccupationByName(adventurer.informacionGeneral.ocupacion)?.distinctiveFeature?.options && !guidedDraft.occupationTraitOption) return false;
+        return true;
+    }
     if (guidedStep === 6 && guidedDraft.distinctiveFeatures.length !== 2) return false;
     const invalid = [...guidedStepContent.querySelectorAll('[aria-required="true"]')].find(input => !String(input.value).trim());
     if (!invalid) return true;
@@ -438,8 +474,11 @@ function completeGuidedCreation() {
 }
 
 async function guideNewAdventurer() {
-    await loadCultures();
-    guidedDraft = { cultureId: adventurer.creation?.cultureId || '', attributeRoll: adventurer.creation?.attributeRoll || null, favoredSkills: [...(adventurer.creation?.favoredSkills || [])], combatProficiencies: { ...(adventurer.creation?.combatProficiencies || {}) }, distinctiveFeatures: [...(adventurer.creation?.distinctiveFeatures || adventurer.rasgosDistintivos || [])] };
+    await Promise.all([loadCultures(), loadOccupations()]);
+    const savedOccupation = getOccupationByName(adventurer.informacionGeneral.ocupacion);
+    const savedOccupationFeature = adventurer.creation?.occupationDistinctiveFeature || '';
+    const savedOccupationTraitOption = savedOccupation?.distinctiveFeature?.options?.find(option => savedOccupationFeature === `${savedOccupation.distinctiveFeature.name}: ${option}`) || '';
+    guidedDraft = { cultureId: adventurer.creation?.cultureId || '', attributeRoll: adventurer.creation?.attributeRoll || null, favoredSkills: [...(adventurer.creation?.favoredSkills || [])], occupationFavoredSkills: [...(adventurer.creation?.occupationFavoredSkills || [])], combatProficiencies: { ...(adventurer.creation?.combatProficiencies || {}) }, distinctiveFeatures: [...(adventurer.creation?.distinctiveFeatures || adventurer.rasgosDistintivos || [])], occupationTraitOption: savedOccupationTraitOption };
     guidedStep = 0;
     renderGuidedStep();
     if (guidedModal) guidedModal.show();
@@ -452,14 +491,30 @@ guidedForm.addEventListener('change', event => {
         guidedDraft.cultureId = input.value;
         guidedDraft.attributeRoll = null;
         guidedDraft.favoredSkills = [];
+        guidedDraft.occupationFavoredSkills = [];
         guidedDraft.combatProficiencies = {};
         guidedDraft.distinctiveFeatures = [];
         renderGuidedStep();
         return;
     }
+    if (input.dataset.guidedPath === 'informacionGeneral.ocupacion') {
+        updateGuidedValue(input);
+        guidedDraft.favoredSkills = [];
+        guidedDraft.occupationFavoredSkills = [];
+        guidedDraft.occupationTraitOption = '';
+        return;
+    }
     if (input.matches('[data-guided-attribute]')) { guidedDraft.attributeRoll = Number(input.value); renderGuidedStep(); return; }
-    if (input.matches('[data-guided-favored]')) { guidedDraft.favoredSkills = [...guidedStepContent.querySelectorAll('[data-guided-favored]:checked')].map(item => item.dataset.guidedFavored); return; }
+    if (input.matches('[data-guided-favored]')) {
+        const selectedInputs = [...guidedStepContent.querySelectorAll('[data-guided-favored]:checked')];
+        if (selectedInputs.length > 2) input.checked = false;
+        guidedDraft.occupationFavoredSkills = [...guidedStepContent.querySelectorAll('[data-guided-favored]:checked')].map(item => item.dataset.guidedFavored);
+        guidedDraft.favoredSkills = guidedFavoredSkills(getCultureById(guidedDraft.cultureId));
+        renderGuidedStep();
+        return;
+    }
     if (input.matches('[data-guided-combat]')) { guidedDraft.combatProficiencies[input.dataset.guidedCombat] = input.value; return; }
+    if (input.matches('[data-guided-occupation-trait]')) { guidedDraft.occupationTraitOption = input.value; renderGuidedStep(); return; }
     if (input.matches('[data-guided-trait]')) {
         const selectedInputs = [...guidedStepContent.querySelectorAll('[data-guided-trait]:checked')];
         if (selectedInputs.length > 2) input.checked = false;

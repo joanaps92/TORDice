@@ -1,0 +1,44 @@
+[
+  {
+    "id": "buscador-tesoros",
+    "name": "Buscador de tesoros",
+    "favoredSkillsChoices": ["explorar", "inspeccionar", "sigilo"],
+    "distinctiveFeature": { "name": "Hurtar", "description": "Incluye vaciar bolsillos, forzar cerraduras y cualquier forma turbia de hacerse con posesiones o acceder a zonas protegidas." },
+    "shadowPath": "Mal del dragón"
+  },
+  {
+    "id": "campeon",
+    "name": "Campeón",
+    "favoredSkillsChoices": ["atletismo", "cazar", "impresionar"],
+    "distinctiveFeature": { "name": "Saber del enemigo", "description": "Conocimientos sobre las características, hábitos, fortalezas y debilidades de un enemigo elegido.", "options": ["Arañas", "Hombres malignos", "Huargos", "Muertos vivientes", "Orcos", "Troles"] },
+    "shadowPath": "Maldición de la venganza"
+  },
+  {
+    "id": "capitan",
+    "name": "Capitán",
+    "favoredSkillsChoices": ["guerrear", "persuadir", "alentar"],
+    "distinctiveFeature": { "name": "Liderazgo", "description": "Aptitud para dirigir a los demás y guiarlos para que pasen a la acción bajo presión." },
+    "shadowPath": "Atracción del poder"
+  },
+  {
+    "id": "erudito",
+    "name": "Erudito",
+    "favoredSkillsChoices": ["acertijos", "oficio", "saber"],
+    "distinctiveFeature": { "name": "Versos de saber", "description": "Rimas cortas creadas para recordar hechos significativos de la historia antigua." },
+    "shadowPath": "Atracción de los secretos"
+  },
+  {
+    "id": "guardian",
+    "name": "Guardián",
+    "favoredSkillsChoices": ["alerta", "curar", "perspicacia"],
+    "distinctiveFeature": { "name": "Saber de la sombra", "description": "Conocimiento del hilo oculto que une gran parte de lo malicioso, oscuro y terrible de la Tierra Media." },
+    "shadowPath": "Camino de la desesperación"
+  },
+  {
+    "id": "mensajero",
+    "name": "Mensajero",
+    "favoredSkillsChoices": ["cantar", "cortesia", "viajar"],
+    "distinctiveFeature": { "name": "Saber popular", "description": "Conocimiento de las costumbres, creencias, historias y lenguas de las comunidades de los Pueblos Libres." },
+    "shadowPath": "Locura del trotamundos"
+  }
+]

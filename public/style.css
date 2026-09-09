@@ -1063,6 +1063,11 @@ h1, h2, h3, h4, h5, h6,
 .attribute-choice em { color: var(--tor-ink-muted); font-size: .84rem; font-style: normal; }
 .guided-choice-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .guided-choice-list label { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border: 1px solid var(--tor-red-border); border-radius: 5px; color: var(--tor-ink); font: 1rem 'Crimson Pro', Georgia, serif; }
+.guided-choice-list-item { cursor: pointer; }
+.occupation-trait-card { margin-top: 18px; padding: 14px 16px; border: 1px solid var(--tor-red-border); border-radius: 5px; background: rgba(197, 160, 89, .1); }
+.occupation-trait-card > strong { color: var(--tor-red-dark); font: 700 .78rem 'Cinzel', serif; text-transform: uppercase; }
+.occupation-trait-card > p { margin: 5px 0 12px; color: var(--tor-ink); font: 1rem 'Crimson Pro', Georgia, serif; }
+.occupation-trait-field { margin-top: 10px; }
 .guided-choice-rank { display: inline-flex; align-items: center; padding: 2px 6px; color: #fff; background: var(--tor-red); border-radius: 999px; font: 700 .62rem 'Cinzel', serif; font-style: normal; text-transform: uppercase; }
 .guided-traits-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .guided-trait-choice { display: flex; align-items: center; gap: 9px; padding: 12px 14px; border: 1px solid var(--tor-red-border); border-radius: 5px; color: var(--tor-ink); background: rgba(255,255,255,.55); cursor: pointer; font: 1rem 'Crimson Pro', Georgia, serif; transition: all .2s ease; }
