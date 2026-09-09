@@ -888,7 +888,12 @@ function renderGuidedRollSourceOptions() {
     const selected = getAssignedAdventurerForRoll();
     if (!guidedRollSource || !selected) return;
     const options = currentRollMode === 'skill'
-        ? guidedSkillCatalog.map(skill => `<option value="${skill.key}">${displayName(skill.key)} · ${displayName(skill.attribute)}</option>`)
+        ? guidedSkillCatalog.map(skill => {
+            const skillData = selected.sheet.habilidades?.[skill.attribute]?.[skill.key] || {};
+            const rank = Number(skillData.rango) || 0;
+            const favoredLabel = skillData.favorecida ? ' · Favorecida' : '';
+            return `<option value="${skill.key}">${displayName(skill.key)} · ${displayName(skill.attribute)} · Rango ${rank}${favoredLabel}</option>`;
+        })
         : validWeaponChoices(selected.sheet).map(weapon => `<option value="${weapon.index}">${escapeHtml(weapon.item.nombre)} · ${displayName(weapon.competence)} ${weapon.rank}</option>`);
     guidedRollSource.innerHTML = options.length ? options.join('') : '<option value="">No hay opciones válidas</option>';
     guidedRollSource.disabled = !options.length;
@@ -1283,7 +1288,7 @@ joinBtn.addEventListener('click', () => {
     saveLastSession(currentUser, currentRoom);
 
     userDisplay.innerHTML = `<i class="fa-solid fa-user me-1"></i> ${currentUser}`;
-    roomDisplay.innerHTML = `<i class="fa-solid fa-fort-awesome me-1"></i> Sala: ${currentRoom}`;
+    roomDisplay.innerHTML = `<i class="fa-solid fa-landmark me-1"></i> Sala: ${currentRoom}`;
     changeUsernameInput.value = currentUser;
 
     if (isLocalFile) {
