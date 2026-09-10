@@ -100,11 +100,13 @@ const adventureList = document.getElementById('adventure-list');
 const adventureCatalogCount = document.getElementById('adventure-catalog-count');
 const adventureCharacterSelect = document.getElementById('adventure-character-select');
 const adventureCharacterNote = document.getElementById('adventure-character-note');
+const adventureCharacterSheetBtn = document.getElementById('adventure-character-sheet-btn');
 const adventureSessionList = document.getElementById('adventure-session-list');
 const adventureSessionPanel = document.getElementById('adventure-session-panel');
 const adventureSessionStatus = document.getElementById('adventure-session-status');
 const adventureSessionTitle = document.getElementById('adventure-session-title');
 const adventureSessionCharacter = document.getElementById('adventure-session-character');
+const adventureSessionCharacterBtn = document.getElementById('adventure-session-character-btn');
 const adventureStateBadges = document.getElementById('adventure-state-badges');
 const adventureSceneTitle = document.getElementById('adventure-scene-title');
 const adventureSceneText = document.getElementById('adventure-scene-text');
@@ -118,6 +120,13 @@ const adventureChoices = document.getElementById('adventure-choices');
 const adventureCompletedBox = document.getElementById('adventure-completed-box');
 const adventureRestartBtn = document.getElementById('adventure-restart-btn');
 const adventureHistory = document.getElementById('adventure-history');
+const adventureCharacterSheetModalElement = document.getElementById('adventureCharacterSheetModal');
+const adventureCharacterSheetModal = adventureCharacterSheetModalElement && window.bootstrap
+    ? bootstrap.Modal.getOrCreateInstance(adventureCharacterSheetModalElement)
+    : null;
+const adventureCharacterSheetTitle = document.getElementById('adventure-character-sheet-title');
+const adventureCharacterSheetSubtitle = document.getElementById('adventure-character-sheet-subtitle');
+const adventureCharacterSheetContent = document.getElementById('adventure-character-sheet-content');
 
 // Dice Control Elements
 const d12ValBadge = document.getElementById('d12-val-badge');
@@ -1441,6 +1450,83 @@ function updateAdventureCharacterNote() {
         : 'El personaje se usará para calcular las tiradas de habilidad.';
 }
 
+function formatAdventureTimestamp(value) {
+    if (!value) return 'Sin actividad registrada';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Sin actividad registrada';
+    return new Intl.DateTimeFormat('es-ES', { dateStyle: 'short', timeStyle: 'short' }).format(date);
+}
+
+function selectedAdventureCharacter() {
+    return adventureCharacters.find(character => character.id === adventureCharacterSelect?.value) || adventureCharacters[0] || null;
+}
+
+function renderAdventureCharacterSheet(character) {
+    const ficha = character?.ficha || {};
+    const general = ficha.informacionGeneral || {};
+    const attributes = ficha.atributos || {};
+    const stats = ficha.estadisticas || {};
+    const hope = stats.esperanza || {};
+    const endurance = stats.aguante || {};
+    const skills = Object.entries(ficha.habilidades || {}).flatMap(([, group]) => Object.entries(group || {}));
+    const combat = Object.entries(ficha.combate?.competencias || {});
+    const equipment = (ficha.combate?.equipoGuerra || []).map(entry => entry?.item || entry).filter(item => item?.nombre);
+    const attributeLabels = { fuerza: 'Fuerza', corazon: 'Corazón', mente: 'Mente' };
+    const attributeMarkup = Object.entries(attributeLabels).map(([key, label]) => {
+        const attribute = attributes[key] || {};
+        return `<div class="adventure-sheet-stat"><span>${label}</span><strong>${escapeHtml(attribute.valor ?? '—')}</strong><small>NO ${escapeHtml(attribute.tn ?? '—')}</small></div>`;
+    }).join('');
+    const skillMarkup = skills.length
+        ? skills.map(([key, value]) => `<span class="adventure-sheet-skill"><strong>${escapeHtml(displayName(key))}</strong><small>Rango ${escapeHtml(value?.rango ?? 0)}${value?.favorecida ? ' · Favorecida' : ''}</small></span>`).join('')
+        : '<span class="adventure-sheet-muted">No hay habilidades detalladas para este personaje.</span>';
+    const combatMarkup = combat.length
+        ? combat.map(([key, value]) => `<span class="adventure-sheet-skill"><strong>${escapeHtml(displayName(key))}</strong><small>Rango ${escapeHtml(value ?? 0)}</small></span>`).join('')
+        : '<span class="adventure-sheet-muted">Sin competencias de combate detalladas.</span>';
+    const equipmentMarkup = equipment.length
+        ? equipment.map(item => `<span class="adventure-sheet-equipment"><strong>${escapeHtml(item.nombre)}</strong><small>${escapeHtml(item.competencia || item.tipoItem || 'Equipo')}</small></span>`).join('')
+        : '<span class="adventure-sheet-muted">Sin equipo de guerra detallado.</span>';
+
+    adventureCharacterSheetTitle.textContent = general.nombre || character?.nombre || 'Personaje';
+    adventureCharacterSheetSubtitle.textContent = [general.culturaHeroica || character?.description, general.ocupacion].filter(Boolean).join(' · ');
+    adventureCharacterSheetContent.innerHTML = `
+        <div class="adventure-sheet-summary">
+            <div><span>Cultura heroica</span><strong>${escapeHtml(general.culturaHeroica || character?.description || '—')}</strong></div>
+            <div><span>Ocupación</span><strong>${escapeHtml(general.ocupacion || '—')}</strong></div>
+        </div>
+        <div class="adventure-sheet-section">
+            <span class="adventure-sheet-section-label">ATRIBUTOS</span>
+            <div class="adventure-sheet-stats">${attributeMarkup}</div>
+        </div>
+        <div class="adventure-sheet-section">
+            <span class="adventure-sheet-section-label">RECURSOS</span>
+            <div class="adventure-sheet-resource-grid">
+                <div><span>Aguante</span><strong>${escapeHtml(endurance.actual ?? '—')} / ${escapeHtml(endurance.maximo ?? '—')}</strong></div>
+                <div><span>Esperanza</span><strong>${escapeHtml(hope.actual ?? '—')} / ${escapeHtml(hope.maxima ?? '—')}</strong></div>
+                <div><span>Parada</span><strong>${escapeHtml(stats.parada ?? '—')}</strong></div>
+                <div><span>Fatiga</span><strong>${escapeHtml(stats.fatiga ?? '—')}</strong></div>
+            </div>
+        </div>
+        <div class="adventure-sheet-section">
+            <span class="adventure-sheet-section-label">HABILIDADES</span>
+            <div class="adventure-sheet-skill-grid">${skillMarkup}</div>
+        </div>
+        <div class="adventure-sheet-section">
+            <span class="adventure-sheet-section-label">COMBATE Y EQUIPO</span>
+            <div class="adventure-sheet-skill-grid">${combatMarkup}</div>
+            <div class="adventure-sheet-equipment-grid mt-2">${equipmentMarkup}</div>
+        </div>
+    `;
+}
+
+function showAdventureCharacterSheet(character) {
+    if (!character) {
+        appAlert('Selecciona un personaje para consultar su hoja.', 'Hoja del personaje');
+        return;
+    }
+    renderAdventureCharacterSheet(character);
+    if (adventureCharacterSheetModal) adventureCharacterSheetModal.show();
+}
+
 function renderAdventureCharacters() {
     if (!adventureCharacterSelect) return;
     if (!adventureCharacters.length) {
@@ -1468,11 +1554,11 @@ function renderAdventureSessions() {
         const title = adventureTitleForSession(session);
         const status = session.status === 'active' ? 'En curso' : 'Completada';
         const statusClass = session.status === 'active' ? 'active' : 'completed';
-        const date = session.updatedAt ? new Date(session.updatedAt).toLocaleDateString('es-ES') : '';
+        const lastInteraction = formatAdventureTimestamp(session.updatedAt);
         return `
             <button type="button" class="adventure-session-item" data-session-id="${escapeHtml(session.id)}">
                 <span class="adventure-session-item-icon"><i class="fa-solid ${session.status === 'active' ? 'fa-feather-pointed' : 'fa-check'}"></i></span>
-                <span class="adventure-session-item-body"><strong>${escapeHtml(title)}</strong><small>${status} · ${date}</small></span>
+                <span class="adventure-session-item-body"><strong>${escapeHtml(title)}</strong><small>${status} · Última interacción: ${escapeHtml(lastInteraction)}</small></span>
                 <span class="adventure-session-status ${statusClass}">${status}</span>
             </button>
         `;
@@ -1506,6 +1592,7 @@ function renderAdventureSession(session, roll = null) {
     adventureSessionPanel.classList.remove('d-none');
     adventureSessionTitle.textContent = session.adventure?.title || adventureTitleForSession(session);
     adventureSessionCharacter.textContent = session.character?.nombre ? `Interpretando a ${session.character.nombre}` : '';
+    adventureSessionCharacterBtn.classList.toggle('d-none', !session.character);
     adventureSessionStatus.textContent = session.status === 'completed' ? 'CRÓNICA COMPLETADA' : 'CRÓNICA ACTIVA';
     adventureSceneTitle.textContent = session.scene?.title || 'Fin de la crónica';
     adventureSceneText.textContent = session.scene?.text || 'La historia ha llegado a su conclusión.';
@@ -1640,6 +1727,8 @@ if (adventureBackBtn) adventureBackBtn.addEventListener('click', () => {
     roomSelectionScreen.classList.add('d-flex');
 });
 if (adventureRefreshBtn) adventureRefreshBtn.addEventListener('click', () => loadAdventureModeData(false));
+if (adventureCharacterSheetBtn) adventureCharacterSheetBtn.addEventListener('click', () => showAdventureCharacterSheet(selectedAdventureCharacter()));
+if (adventureSessionCharacterBtn) adventureSessionCharacterBtn.addEventListener('click', () => showAdventureCharacterSheet(currentAdventureSession?.character));
 if (adventureRollBtn) adventureRollBtn.addEventListener('click', resolveAdventureRoll);
 if (adventureRestartBtn) adventureRestartBtn.addEventListener('click', () => startAdventure(currentAdventureSession?.adventure?.id || selectedAdventureId));
 if (adventureList) adventureList.addEventListener('dblclick', event => {

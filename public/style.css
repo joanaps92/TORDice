@@ -1062,6 +1062,7 @@ h1, h2, h3, h4, h5, h6,
 .adventure-story-panel { margin-top: 18px; }
 .adventure-story-character { margin: 5px 0 0; color: var(--tor-ink-muted); font: 1rem 'Crimson Pro', Georgia, serif; }
 .adventure-state-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.adventure-story-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 9px; }
 .adventure-state-badge { padding: 5px 8px; border-radius: 99px; font: 700 .66rem 'Cinzel', serif; text-transform: uppercase; }
 .adventure-state-badge.hope { color: #8a3e30; background: rgba(188,44,26,.1); }
 .adventure-state-badge.endurance { color: #536d2d; background: rgba(104,145,54,.14); }
@@ -1100,6 +1101,26 @@ h1, h2, h3, h4, h5, h6,
 .adventure-history-entry { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(167,40,29,.12); }
 .adventure-history-entry span { color: var(--tor-red); font: 700 .65rem 'Cinzel', serif; text-transform: uppercase; }
 .adventure-history-entry p { margin: 0; color: var(--tor-ink-muted); font: 1rem 'Crimson Pro', Georgia, serif; }
+.adventure-character-sheet-subtitle { color: var(--tor-ink-muted); font: 1rem 'Crimson Pro', Georgia, serif; }
+.adventure-sheet-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 13px 15px; border: 1px solid var(--tor-red-border); background: rgba(197,160,89,.1); }
+.adventure-sheet-summary span, .adventure-sheet-summary strong, .adventure-sheet-resource-grid span, .adventure-sheet-resource-grid strong { display: block; }
+.adventure-sheet-summary span, .adventure-sheet-resource-grid span { color: var(--tor-ink-muted); font: .88rem 'Crimson Pro', Georgia, serif; }
+.adventure-sheet-summary strong { margin-top: 2px; color: var(--tor-red-dark); font: 700 .76rem 'Cinzel', serif; text-transform: uppercase; }
+.adventure-sheet-section { margin-top: 17px; }
+.adventure-sheet-section-label { display: block; margin-bottom: 8px; color: var(--tor-red-dark); font: 700 .7rem 'Cinzel', serif; letter-spacing: .35px; text-transform: uppercase; }
+.adventure-sheet-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+.adventure-sheet-stat { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; padding: 10px; border: 1px solid rgba(167,40,29,.23); background: rgba(255,255,255,.5); }
+.adventure-sheet-stat span { grid-column: 1 / -1; color: var(--tor-red-dark); font: 700 .75rem 'Cinzel', serif; text-transform: uppercase; }
+.adventure-sheet-stat strong { color: var(--tor-ink); font: 700 1.3rem 'Crimson Pro', Georgia, serif; }
+.adventure-sheet-stat small { align-self: end; color: var(--tor-ink-muted); font: .78rem 'Crimson Pro', Georgia, serif; }
+.adventure-sheet-resource-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.adventure-sheet-resource-grid > div { padding: 9px 10px; border-left: 3px solid var(--tor-gold); background: rgba(197,160,89,.1); }
+.adventure-sheet-resource-grid strong { margin-top: 2px; color: var(--tor-red-dark); font: 700 .78rem 'Cinzel', serif; }
+.adventure-sheet-skill-grid, .adventure-sheet-equipment-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.adventure-sheet-skill, .adventure-sheet-equipment { display: flex; flex-direction: column; gap: 2px; padding: 8px 9px; border: 1px solid rgba(167,40,29,.18); background: rgba(255,255,255,.45); }
+.adventure-sheet-skill strong, .adventure-sheet-equipment strong { color: var(--tor-ink); font: 1rem 'Crimson Pro', Georgia, serif; }
+.adventure-sheet-skill small, .adventure-sheet-equipment small { color: var(--tor-ink-muted); font: .78rem 'Crimson Pro', Georgia, serif; }
+.adventure-sheet-muted { grid-column: 1 / -1; color: var(--tor-ink-muted); font: 1rem 'Crimson Pro', Georgia, serif; }
 @media (max-width: 800px) {
     .adventure-layout { grid-template-columns: 1fr; }
     .adventure-header { grid-template-columns: auto minmax(0, 1fr); }
@@ -1115,10 +1136,12 @@ h1, h2, h3, h4, h5, h6,
     .adventure-start-card-btn { grid-column: 2; justify-self: start; }
     .adventure-state-badges { justify-content: flex-start; margin-top: 8px; }
     .adventure-story-heading { display: block; }
+    .adventure-story-actions { align-items: flex-start; margin-top: 10px; }
     .adventure-roll-box { align-items: flex-start; flex-wrap: wrap; }
     .adventure-roll-box .btn { width: 100%; }
     .adventure-completed-box { align-items: flex-start; flex-wrap: wrap; }
     .adventure-completed-box .btn { margin-left: 36px; }
+    .adventure-sheet-summary, .adventure-sheet-stats, .adventure-sheet-resource-grid, .adventure-sheet-skill-grid, .adventure-sheet-equipment-grid { grid-template-columns: 1fr 1fr; }
 }
 
 /* =========================================================

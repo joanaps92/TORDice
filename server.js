@@ -423,6 +423,7 @@ function serializeAdventureSession(sessionDocument, adventure, character) {
             id: character.id,
             nombre: character.nombre,
             description: character.description || '',
+            ficha: character.ficha || {},
             isDefault: Boolean(character.isDefault)
         } : { id: session.characterId },
         status: session.status,
@@ -511,6 +512,7 @@ app.get('/api/adventure-characters', authenticateToken, async (req, res) => {
             id: `default:${character.id}`,
             nombre: character.nombre,
             description: character.description || '',
+            ficha: character.ficha || {},
             isDefault: true
         }));
         res.json([
@@ -519,6 +521,7 @@ app.get('/api/adventure-characters', authenticateToken, async (req, res) => {
                 id: String(character._id),
                 nombre: character.nombre,
                 description: character.ficha?.informacionGeneral?.culturaHeroica || '',
+                ficha: character.ficha || {},
                 isDefault: false
             }))
         ]);

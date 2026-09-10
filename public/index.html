@@ -22,7 +22,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800;900&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600&family=MedievalSharp&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=adventures-1">
+    <link rel="stylesheet" href="style.css?v=adventures-2">
 </head>
 <body>
     <!-- Auth Screen -->
@@ -754,6 +754,7 @@
                         <select id="adventure-character-select" class="form-select tor-select">
                             <option value="">Cargando personajes…</option>
                         </select>
+                        <button id="adventure-character-sheet-btn" type="button" class="btn btn-outline-danger btn-sm mt-2"><i class="fa-solid fa-scroll me-1"></i> Ver hoja del personaje</button>
                         <small id="adventure-character-note" class="adventure-field-note">El personaje se usará para calcular las tiradas de habilidad.</small>
                     </div>
                 </section>
@@ -778,7 +779,10 @@
                         <h2 id="adventure-session-title">Aventura</h2>
                         <p id="adventure-session-character" class="adventure-story-character"></p>
                     </div>
-                    <div id="adventure-state-badges" class="adventure-state-badges"></div>
+                    <div class="adventure-story-actions">
+                        <button id="adventure-session-character-btn" type="button" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-scroll me-1"></i> Ver hoja</button>
+                        <div id="adventure-state-badges" class="adventure-state-badges"></div>
+                    </div>
                 </div>
 
                 <div class="adventure-scene-card">
@@ -818,6 +822,29 @@
             </section>
         </div>
     </main>
+
+    <!-- Read-only character sheet for narrative adventures -->
+    <div class="modal fade adventure-character-sheet-modal" id="adventureCharacterSheetModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content tor-book-panel border-0 shadow-lg">
+                <div class="tor-corner-tl"></div><div class="tor-corner-tr"></div><div class="tor-corner-bl"></div><div class="tor-corner-br"></div>
+                <div class="modal-header border-bottom-0 align-items-start">
+                    <div>
+                        <div class="tor-mini-header mb-1">HOJA DEL PERSONAJE</div>
+                        <h5 class="modal-title logo-text fs-4" id="adventure-character-sheet-title">Personaje</h5>
+                        <p class="adventure-character-sheet-subtitle mb-0" id="adventure-character-sheet-subtitle"></p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body pt-2">
+                    <div id="adventure-character-sheet-content"></div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-tor-primary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Adventurer sheet -->
     <main id="adventurer-screen" class="adventurer-screen d-none">
@@ -896,7 +923,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Socket.io client -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script src="auth.js?v=adventures-1"></script>
-    <script src="client.js?v=adventures-1"></script>
+    <script src="auth.js?v=adventures-2"></script>
+    <script src="client.js?v=adventures-2"></script>
 </body>
 </html>
