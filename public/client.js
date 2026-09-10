@@ -60,6 +60,33 @@ const saveLocalHistory = (room, roll) => {
     localStorage.setItem(`rpg_history_${room}`, JSON.stringify(history));
 };
 
+function getRollDate(roll) {
+    const value = roll?.createdAt;
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function sortRollsChronologically(rolls) {
+    return [...rolls].sort((first, second) => {
+        const firstDate = getRollDate(first)?.getTime() ?? (Number(first?.id) || 0);
+        const secondDate = getRollDate(second)?.getTime() ?? (Number(second?.id) || 0);
+        return firstDate - secondDate;
+    });
+}
+
+function formatRollTimestamp(roll) {
+    const date = getRollDate(roll);
+    if (!date) return roll?.timestamp || '';
+    const now = new Date();
+    const sameDay = date.getFullYear() === now.getFullYear()
+        && date.getMonth() === now.getMonth()
+        && date.getDate() === now.getDate();
+    return new Intl.DateTimeFormat('es-ES', sameDay
+        ? { timeStyle: 'short' }
+        : { dateStyle: 'short', timeStyle: 'short' }).format(date);
+}
+
 // State
 let currentUser = "";
 let currentRoom = "";
@@ -1767,7 +1794,7 @@ joinBtn.addEventListener('click', () => {
         const history = getLocalHistory(currentRoom);
         historyList.innerHTML = "";
         if (history.length === 0) renderEmptyMessage();
-        else history.forEach(roll => addRollToUI(roll, false));
+        else sortRollsChronologically(history).forEach(roll => addRollToUI(roll, false));
         scrollToBottom();
         renderLocalActiveUsers();
     } else {
@@ -1807,6 +1834,7 @@ function localRoll(request = null) {
         id: Date.now(),
         user: currentUser,
         stance: currentStance,
+        createdAt: new Date().toISOString(),
         d12Results,
         d6Results,
         total,
@@ -1959,7 +1987,7 @@ function setupSocketListeners() {
 socket.on('load-history', (history) => {
     historyList.innerHTML = "";
     if (history.length === 0) renderEmptyMessage();
-    else { history.forEach(roll => addRollToUI(roll, false)); scrollToBottom(); }
+    else { sortRollsChronologically(history).forEach(roll => addRollToUI(roll, false)); scrollToBottom(); }
 });
 
 socket.on('new-roll', (roll) => {
@@ -2113,7 +2141,7 @@ function addRollToUI(roll, isNew) {
                 <div class="fw-bold text-dark mb-1 d-flex align-items-center flex-wrap">
                     <span>${escapeHtml(roll.user)}</span>
                     ${stancePill}
-                    <span class="text-muted fw-normal ms-2" style="font-size: 0.75rem;">${roll.timestamp}</span>
+                    <span class="text-muted fw-normal ms-2" style="font-size: 0.75rem;">${escapeHtml(formatRollTimestamp(roll))}</span>
                 </div>
                 ${contextualDetails}
                 ${d12Str}

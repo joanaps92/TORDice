@@ -707,7 +707,7 @@ io.on('connection', (socket) => {
             }
 
             const history = await Roll.find({ room: roomName })
-                .sort({ createdAt: -1 })
+                .sort({ createdAt: 1, _id: 1 })
                 .limit(50);
             socket.emit('load-history', history);
 
@@ -842,6 +842,7 @@ io.on('connection', (socket) => {
                 room,
                 user: senderName,
                 stance: senderStance,
+                createdAt: new Date(),
                 d12Results,
                 d6Results,
                 total,
