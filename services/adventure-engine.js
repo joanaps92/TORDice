@@ -25,6 +25,13 @@ class AdventureEngine {
         return (scene?.choices || []).filter(choice => this.evaluateConditions(choice.conditions, flags));
     }
 
+    ensureSessionState(session) {
+        if (!session.storyFlags || typeof session.storyFlags !== 'object' || Array.isArray(session.storyFlags)) session.storyFlags = {};
+        if (!session.adventureState || typeof session.adventureState !== 'object' || Array.isArray(session.adventureState)) session.adventureState = {};
+        if (!Array.isArray(session.history)) session.history = [];
+        return session;
+    }
+
     createSession({ sessionId, characterId, character }) {
         const ficha = character?.ficha || {};
         const session = {
@@ -51,12 +58,14 @@ class AdventureEngine {
     }
 
     record(session, type, text, sceneId = session.currentSceneId, metadata = undefined) {
+        this.ensureSessionState(session);
         const entry = { timestamp: this.clock(), sceneId, type, text };
         if (metadata !== undefined) entry.metadata = metadata;
         session.history.push(entry);
     }
 
     applyActions(session, actions = []) {
+        this.ensureSessionState(session);
         actions.forEach(action => {
             if (!action || typeof action !== 'object') throw new Error('Acción narrativa no válida.');
             switch (action.type) {
@@ -94,7 +103,7 @@ class AdventureEngine {
     }
 
     chooseChoice(inputSession, choiceId) {
-        const session = clone(inputSession);
+        const session = this.ensureSessionState(clone(inputSession));
         if (session.status !== 'active') throw new Error('La partida ya no está activa.');
         if (session.pendingRoll) throw new Error('La partida tiene una tirada pendiente.');
 
@@ -124,7 +133,7 @@ class AdventureEngine {
     }
 
     resolvePendingRoll(inputSession, result) {
-        const session = clone(inputSession);
+        const session = this.ensureSessionState(clone(inputSession));
         if (session.status !== 'active') throw new Error('La partida ya no está activa.');
         if (!session.pendingRoll) throw new Error('La partida no tiene ninguna tirada pendiente.');
 

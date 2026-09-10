@@ -29,7 +29,10 @@ test('una elección con habilidad queda pendiente y el éxito cambia de escena',
     assert.equal(pending.status, 'pending-roll');
     assert.equal(pending.session.pendingRoll.skill, 'explorar');
 
-    const resolved = engine.resolvePendingRoll(pending.session, {
+    const persistedPending = { ...pending.session };
+    delete persistedPending.storyFlags;
+    delete persistedPending.adventureState;
+    const resolved = engine.resolvePendingRoll(persistedPending, {
         success: true,
         total: 18,
         outcome: 'success'
