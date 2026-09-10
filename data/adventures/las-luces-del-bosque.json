@@ -1,0 +1,327 @@
+{
+"id": "las-luces-del-bosque",
+"title": "Las luces del bosque",
+"description": "En un camino secundario entre Bree y los Túmulos, unas luces errantes conducen al viajero hacia un misterio antiguo, un peligro oculto y una decisión que pondrá a prueba su compasión.",
+"duration": "20-30 minutos",
+"difficulty": "Media",
+"startSceneId": "inicio",
+"scenes": [
+{
+"id": "inicio",
+"title": "Luces entre los arboles",
+"text": "La tarde se apaga mientras avanzas por un sendero poco transitado al sur de Bree. A un lado se alzan colinas cubiertas de brezo; al otro, un bosque pequeño y espeso se extiende hacia las tierras solitarias próximas a los Túmulos. El viento trae olor a tierra húmeda y hojas podridas. No has visto viajeros desde hace horas. Cuando cae la primera sombra de la noche, una luz amarillenta aparece entre los árboles. Luego otra. No parecen antorchas: se mueven despacio, desaparecen y vuelven a surgir a distinta altura. Poco después escuchas un ruido junto al camino. Entre la hierba encuentras una cesta volcada, una manta embarrada y el pequeño zapato de un niño. Las luces se alejan hacia el interior del bosque. Puedes seguirlas directamente o detenerte a examinar el lugar antes de abandonar el camino.",
+"onEnter": [],
+"choices": [
+{
+"id": "seguir-las-luces",
+"text": "Seguir las luces antes de que desaparezcan entre los árboles.",
+"nextSceneId": "sendero-oscuro",
+"actions": [
+{
+"type": "SET_FLAG",
+"key": "siguioLasLuces",
+"value": true
+}
+]
+},
+{
+"id": "examinar-el-camino",
+"text": "Examinar la cesta, el barro y los alrededores en busca de pistas.",
+"skillCheck": {
+"skill": "inspeccionar",
+"successSceneId": "rastro-en-el-barro",
+"failureSceneId": "sendero-oscuro"
+},
+"actions": []
+}
+]
+},
+{
+"id": "rastro-en-el-barro",
+"title": "Huellas bajo la lluvia",
+"text": "Te arrodillas junto a la cesta y apartas con cuidado unas hojas pegadas al barro. Pronto descubres que alguien abandonó el camino con mucha prisa. Hay huellas pequeñas, probablemente de un niño, junto a las pisadas más profundas de un adulto. Ambas se internan en el bosque, pero algo más llama tu atención: alrededor de ellas aparecen marcas estrechas y alargadas, como si alguien hubiese arrastrado ramas secas formando un círculo. No son huellas de bestia ni de hombre. Entre las raíces encuentras también un trozo de cuerda recién cortada. Quien viajaba por aquí no entró voluntariamente en el bosque. Siguiendo las pisadas puedes evitar el recorrido errático de las luces y avanzar hacia donde fueron llevados los desaparecidos. También podrías seguir las luces, que aún parpadean entre los troncos como si esperasen que fueras tras ellas.",
+"onEnter": [
+{
+"type": "SET_FLAG",
+"key": "descubrioElRastro",
+"value": true
+}
+],
+"choices": [
+{
+"id": "seguir-las-huellas",
+"text": "Seguir las huellas del niño y del adulto.",
+"nextSceneId": "claro-de-los-susurros",
+"actions": []
+},
+{
+"id": "seguir-las-luces-desde-el-rastro",
+"text": "Ignorar las huellas y seguir las luces para descubrir quién las controla.",
+"nextSceneId": "sendero-oscuro",
+"actions": [
+{
+"type": "SET_FLAG",
+"key": "siguioLasLuces",
+"value": true
+}
+]
+}
+]
+},
+{
+"id": "sendero-oscuro",
+"title": "El bosque sin camino",
+"text": "Las luces se deslizan entre hayas retorcidas y robles cubiertos de musgo. Cada vez que crees estar a punto de alcanzarlas, se apagan y reaparecen más lejos. El bosque parece más grande de lo que debería. Las ramas ocultan las estrellas y el silencio resulta tan completo que tus propios pasos suenan extraños. Entonces escuchas un crujido a tu espalda. Al girarte no ves nada, pero una piedra cae desde una pendiente cercana. Algo se mueve entre los helechos. Las luces se detienen por primera vez, formando una hilera que conduce hacia una vaguada oscura. Podrías avanzar con cautela e intentar descubrir quién te observa antes de continuar. También puedes confiar en que el peligro principal está delante y apresurarte hacia las luces, aunque hacerlo podría revelar tu presencia a cualquiera que vigile desde la oscuridad.",
+"onEnter": [],
+"choices": [
+{
+"id": "vigilar-la-oscuridad",
+"text": "Detenerse y observar el bosque antes de avanzar.",
+"skillCheck": {
+"skill": "alerta",
+"successSceneId": "observador-entre-los-helechos",
+"failureSceneId": "caida-en-la-vaguada"
+},
+"actions": []
+},
+{
+"id": "avanzar-sin-detenerse",
+"text": "Avanzar deprisa hacia la vaguada siguiendo las luces.",
+"nextSceneId": "caida-en-la-vaguada",
+"actions": [
+{
+"type": "SET_FLAG",
+"key": "alertoALosEnemigos",
+"value": true
+}
+]
+}
+]
+},
+{
+"id": "observador-entre-los-helechos",
+"title": "Una sombra asustada",
+"text": "Permaneces inmóvil hasta que el bosque vuelve a parecer silencioso. Entonces distingues dos ojos entre los helechos. Das un paso hacia ellos y una figura intenta huir, pero tropieza con una raíz. No es un enemigo, sino un muchacho de unos doce años, cubierto de barro y con una herida en la frente. Entre sollozos explica que viajaba con su madre cuando unas luces aparecieron junto al camino. Ella entró en el bosque intentando encontrar a alguien que pedía auxilio. Después surgieron hombres encapuchados. El muchacho consiguió escapar y lleva horas escondido. Dice haber visto a su madre conducida hacia unas ruinas en un claro. Tiene miedo de regresar, pero conoce un sendero oculto que evita la vaguada. Puedes pedirle que te muestre el camino o dejarlo escondido mientras avanzas solo siguiendo sus indicaciones.",
+"onEnter": [
+{
+"type": "SET_FLAG",
+"key": "encontroAlMuchacho",
+"value": true
+}
+],
+"choices": [
+{
+"id": "llevar-al-muchacho",
+"text": "Convencer al muchacho para que te guíe hasta las ruinas.",
+"nextSceneId": "claro-de-los-susurros",
+"actions": [
+{
+"type": "SET_FLAG",
+"key": "confioEnElMuchacho",
+"value": true
+}
+]
+},
+{
+"id": "dejarlo-a-salvo",
+"text": "Indicarle que permanezca escondido y dirigirte solo hacia las ruinas.",
+"nextSceneId": "claro-de-los-susurros",
+"actions": []
+}
+]
+},
+{
+"id": "caida-en-la-vaguada",
+"title": "La trampa bajo las hojas",
+"text": "Desciendes hacia la vaguada siguiendo el resplandor y el suelo cede bajo tu pie. Una red de ramas ocultaba un hoyo poco profundo. Consigues evitar una caída peligrosa, pero golpeas con fuerza contra una raíz y el ruido rompe el silencio del bosque. Las luces se apagan de inmediato. Desde algún lugar llega un silbido breve, respondido por otro más lejano. No estabas siguiendo espíritus: alguien empleaba faroles ocultos para atraer viajeros fuera del camino. Cuando sales de la trampa encuentras huellas recientes que ascienden hacia un claro. Ahora tus adversarios saben que alguien se acerca. No queda tiempo para investigar el mecanismo. Puedes avanzar intentando mantenerte oculto entre la maleza o abandonar toda cautela y alcanzar las ruinas antes de que quienes prepararon la emboscada tengan tiempo de reaccionar.",
+"onEnter": [
+{
+"type": "REMOVE_ENDURANCE",
+"value": 1
+},
+{
+"type": "SET_FLAG",
+"key": "alertoALosEnemigos",
+"value": true
+}
+],
+"choices": [
+{
+"id": "avanzar-con-sigilo",
+"text": "Avanzar entre la vegetación intentando acercarte sin ser visto.",
+"skillCheck": {
+"skill": "sigilo",
+"successSceneId": "ruinas-desde-las-sombras",
+"failureSceneId": "claro-de-los-susurros"
+},
+"actions": []
+},
+{
+"id": "correr-hacia-las-ruinas",
+"text": "Avanzar rápidamente hacia el claro antes de que puedan preparar otra trampa.",
+"nextSceneId": "claro-de-los-susurros",
+"actions": []
+}
+]
+},
+{
+"id": "ruinas-desde-las-sombras",
+"title": "Los guardianes de la luz",
+"text": "Te aproximas al claro sin producir más sonido que el roce de las hojas. Desde detrás de un muro derrumbado observas unas ruinas antiguas, quizá los restos de una granja fortificada de tiempos olvidados. Tres hombres armados permanecen junto a una hoguera casi apagada. Sus ropas son pobres y sus armas están mal cuidadas. Cerca de ellos hay una mujer atada a una columna rota. Uno de los hombres sostiene un farol cubierto con placas metálicas que permiten ocultar y mostrar su luz mediante una pequeña palanca. Comprendes el engaño: atraen viajeros desde el camino, los capturan y roban cuanto llevan. Sin embargo, los bandidos parecen nerviosos. Hablan de abandonar el bosque antes de que llegue \"la sombra de la colina\". Puedes aprovechar tu posición para liberar a la prisionera sin ser visto o salir de tu escondite e intentar intimidarlos aprovechando su evidente temor.",
+"onEnter": [
+{
+"type": "SET_FLAG",
+"key": "descubrioElEngano",
+"value": true
+}
+],
+"choices": [
+{
+"id": "liberar-a-la-prisionera",
+"text": "Rodear las ruinas y cortar las ataduras de la prisionera aprovechando la oscuridad.",
+"nextSceneId": "la-sombra-de-la-colina",
+"actions": [
+{
+"type": "SET_FLAG",
+"key": "liberoALaPrisionera",
+"value": true
+}
+]
+},
+{
+"id": "intimidar-a-los-bandidos",
+"text": "Salir a la vista y ordenar a los bandidos que abandonen las ruinas.",
+"nextSceneId": "la-sombra-de-la-colina",
+"actions": [
+{
+"type": "SET_FLAG",
+"key": "enfrentoALosBandidos",
+"value": true
+}
+]
+}
+]
+},
+{
+"id": "claro-de-los-susurros",
+"title": "Las ruinas del claro",
+"text": "El bosque termina bruscamente ante un claro cubierto de piedras antiguas. Entre los restos de muros aparece una hoguera y tres hombres armados. Una mujer permanece atada junto a una columna caída. Los hombres te descubren casi al mismo tiempo que tú a ellos. Uno toma un cuchillo; otro levanta una lanza corta, pero ninguno parece dispuesto a lanzarse al ataque. Entonces llega desde las colinas un sonido grave, semejante a un suspiro llevado por el viento. Todos callan. Incluso los bandidos miran hacia los árboles con auténtico miedo. El mayor de ellos asegura que solo querían comida y monedas, y que las luces servían para atraer viajeros. Dice que existe algo peor en estas tierras y que por eso pretendían marcharse esta misma noche. Si encontraste indicios anteriores, sabes que algunas partes de su historia encajan. Puedes exigir que liberen inmediatamente a la mujer o intentar escuchar lo que saben antes de decidir su destino.",
+"onEnter": [
+{
+"type": "SET_FLAG",
+"key": "descubrioElEngano",
+"value": true
+}
+],
+"choices": [
+{
+"id": "exigir-la-liberacion",
+"text": "Exigir que liberen a la prisionera y se aparten.",
+"nextSceneId": "la-sombra-de-la-colina",
+"actions": [
+{
+"type": "SET_FLAG",
+"key": "liberoALaPrisionera",
+"value": true
+}
+]
+},
+{
+"id": "escuchar-a-los-bandidos",
+"text": "Escuchar qué saben sobre la presencia que temen antes de actuar.",
+"nextSceneId": "la-sombra-de-la-colina",
+"actions": [
+{
+"type": "SET_FLAG",
+"key": "escuchoLaAdvertencia",
+"value": true
+}
+]
+}
+]
+},
+{
+"id": "la-sombra-de-la-colina",
+"title": "Algo despierta",
+"text": "Una ráfaga helada atraviesa el claro y extingue casi por completo la hoguera. Desde la dirección de los Túmulos llega un murmullo imposible de entender, pero suficientemente cercano para que todos lo oigan. Los bandidos pierden cualquier deseo de luchar. La mujer liberada explica que, antes de ser capturada, vio una figura inmóvil sobre una colina desnuda, envuelta en una neblina que no se movía con el viento. Desde entonces las luces de los ladrones comenzaron a comportarse de manera extraña, encendiéndose algunas veces sin que nadie las tocara. Los hombres quieren huir dejando atrás faroles, armas y botín. El muchacho, si está contigo, llama a su madre desde el borde del claro. No sabes qué habita realmente más allá del bosque, pero permanecer aquí parece una temeridad. Debes decidir si permites que los ladrones huyan junto con vosotros o si los obligas a quedarse atrás mientras conduces a los inocentes hacia el camino.",
+"onEnter": [],
+"choices": [
+{
+"id": "permitirles-huir",
+"text": "Permitir que los bandidos huyan si abandonan el botín y ayudan a los prisioneros.",
+"nextSceneId": "regreso-por-el-bosque",
+"actions": [
+{
+"type": "SET_FLAG",
+"key": "perdonoALosBandidos",
+"value": true
+},
+{
+"type": "ADD_HOPE",
+"value": 1
+}
+]
+},
+{
+"id": "dejarlos-atras",
+"text": "Ordenar a los bandidos que permanezcan en las ruinas y llevar a los inocentes hacia el camino.",
+"nextSceneId": "regreso-por-el-bosque",
+"actions": [
+{
+"type": "SET_FLAG",
+"key": "abandonoALosBandidos",
+"value": true
+}
+]
+}
+]
+},
+{
+"id": "regreso-por-el-bosque",
+"title": "El ultimo resplandor",
+"text": "El grupo abandona las ruinas mientras la oscuridad cubre por completo el bosque. Durante varios minutos nadie habla. Entonces, detrás de vosotros, una luz amarilla aparece entre los árboles. No procede de ninguno de los faroles abandonados. Una segunda luz surge junto a ella y ambas comienzan a avanzar lentamente. Los bandidos, si viajan contigo, aceleran el paso y uno empieza a murmurar una oración olvidada. La mujer aprieta la mano de su hijo. Sin necesidad de palabras, todos comprenden que las trampas humanas quizá atrajeron la atención de algo que llevaba mucho tiempo dormido cerca de las colinas. Al alcanzar la linde del bosque, las luces se detienen. No cruzan hacia el camino. Puedes marcharte inmediatamente hacia Bree y poner distancia con aquel lugar o detenerte unos instantes para memorizar dónde se encuentra el sendero y advertir después a otros viajeros.",
+"onEnter": [],
+"choices": [
+{
+"id": "partir-hacia-bree",
+"text": "Alejarse del bosque y conducir a los supervivientes hacia Bree.",
+"nextSceneId": "final-camino-seguro",
+"actions": []
+},
+{
+"id": "recordar-el-lugar",
+"text": "Memorizar el lugar y decidir que advertirás a otros viajeros del peligro.",
+"nextSceneId": "final-guardian-del-camino",
+"actions": [
+{
+"type": "SET_FLAG",
+"key": "advirtioDelPeligro",
+"value": true
+}
+]
+}
+]
+},
+{
+"id": "final-camino-seguro",
+"title": "Bajo las estrellas",
+"text": "Dejas atrás el bosque y recuperas el camino bajo un cielo finalmente despejado. Las primeras estrellas aparecen sobre las colinas mientras el grupo avanza hacia las luces lejanas de una granja. La mujer camina junto a su hijo, agotada pero a salvo. Si permitiste que los bandidos escaparan contigo, estos abandonan sus armas al llegar al camino y se marchan hacia el norte sin reclamar el botín. Quizá mantengan su palabra; quizá no. Si los dejaste atrás, ningún sonido llega desde el bosque y prefieres no imaginar qué ocurrió después. Cuando vuelves la vista, las luces misteriosas han desaparecido. Solo queda una franja de oscuridad entre los árboles. Has salvado vidas y descubierto la verdad detrás de las trampas, aunque otra pregunta permanece sin respuesta: quién encendió la última luz cuando ya no quedaba ningún hombre junto a los faroles. Por esta noche, continuar hacia un lugar seguro parece victoria suficiente.",
+"onEnter": [],
+"choices": []
+},
+{
+"id": "final-guardian-del-camino",
+"title": "Una advertencia para los viajeros",
+"text": "Antes de marcharte observas cuidadosamente la entrada del sendero: una roca partida, un roble inclinado hacia el camino y, más allá, la oscuridad donde desaparecieron las luces. No quieres olvidar aquel lugar. Cuando alcances Bree podrás advertir a viajeros, guardias y gentes de los alrededores. Los ladrones pueden haber sido derrotados o dispersados, pero aquello que se movía cerca de los Túmulos continúa siendo un misterio. La mujer y el muchacho te esperan unos pasos más adelante. Si los bandidos viajan contigo, ninguno protesta por la demora; incluso ellos evitan mirar hacia el bosque. Finalmente reanudas la marcha. Una sola luz aparece entre las ramas, débil y distante. Permanece inmóvil durante unos instantes y después se apaga. Tal vez algún día regreses con compañeros y descubras qué habita realmente bajo aquellas colinas. Hasta entonces, tu advertencia quizá sea suficiente para impedir que otros sigan las luces del bosque.",
+"onEnter": [
+{
+"type": "ADD_HOPE",
+"value": 1
+}
+],
+"choices": []
+}
+]
+}
+
+

@@ -5,5 +5,12 @@
     "description": "Aventura técnica mínima para probar escenas, decisiones, tiradas y guardado.",
     "duration": "5 minutos",
     "difficulty": "Prueba"
+  },
+  {
+    "id": "las-luces-del-bosque",
+    "title": "Las luces del bosque",
+    "description": "En un camino secundario entre Bree y los Túmulos, unas luces errantes conducen al viajero hacia un misterio antiguo, un peligro oculto y una decisión que pondrá a prueba su compasión.",
+    "duration": "20-30 minutos",
+    "difficulty": "Media"
   }
 ]
