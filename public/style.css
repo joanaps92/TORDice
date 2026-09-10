@@ -696,6 +696,41 @@ h1, h2, h3, h4, h5, h6,
     letter-spacing: 0.5px;
 }
 
+.zone-summary {
+    max-width: 760px;
+    margin: 7px 0 8px;
+    color: var(--tor-ink);
+    font: 1.02rem 'Crimson Pro', Georgia, serif;
+}
+
+.zone-rule-highlight {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    color: var(--tor-red-dark);
+    background: rgba(188, 44, 26, 0.07);
+    border-left: 2px solid currentColor;
+    font: 700 0.82rem 'Cinzel', serif;
+}
+
+.zone-details-btn {
+    display: block;
+    margin-top: 9px;
+    padding: 0;
+    color: var(--tor-ink-muted);
+    border: 0;
+    background: transparent;
+    font: 700 0.72rem 'Cinzel', serif;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.zone-details-btn:hover,
+.zone-details-btn:focus-visible {
+    color: var(--tor-red-dark);
+    text-decoration: underline;
+}
+
 .badge-tn-vanguardia {
     background: rgba(188, 44, 26, 0.12);
     color: var(--tor-red-dark);
@@ -739,6 +774,56 @@ h1, h2, h3, h4, h5, h6,
 .stance-zone-retaguardia {
     border-left: 5px solid #16a34a;
     background: #fbfdfb;
+}
+
+.stance-details-modal .modal-dialog { max-width: 590px; }
+.stance-details-modal .modal-content { overflow: hidden; }
+.stance-details-subtitle {
+    color: var(--tor-red);
+    font: 0.9rem 'Crimson Pro', Georgia, serif;
+    font-style: italic;
+}
+.stance-details-intro {
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    color: var(--tor-ink);
+    background: rgba(197, 160, 89, 0.12);
+    border: 1px solid rgba(197, 160, 89, 0.5);
+    border-radius: 4px;
+    font: 1.08rem 'Crimson Pro', Georgia, serif;
+}
+.stance-details-section {
+    margin-top: 15px;
+    color: var(--tor-ink);
+}
+.stance-details-label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--tor-red-dark);
+    font: 700 0.72rem 'Cinzel', serif;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+.stance-details-section ul {
+    margin: 0;
+    padding-left: 1.25rem;
+    font: 1.05rem 'Crimson Pro', Georgia, serif;
+}
+.stance-details-section li + li { margin-top: 5px; }
+.stance-details-task {
+    padding: 10px 12px;
+    background: rgba(188, 44, 26, 0.07);
+    border-left: 3px solid var(--tor-red);
+}
+.stance-details-task p,
+.stance-details-note p {
+    margin: 0;
+    font: 1.05rem 'Crimson Pro', Georgia, serif;
+}
+.stance-details-note {
+    padding: 10px 12px;
+    background: rgba(22, 101, 52, 0.08);
+    border-left: 3px solid #16a34a;
 }
 
 /* Player Tokens in Battlefield */
@@ -1135,4 +1220,9 @@ h1, h2, h3, h4, h5, h6,
     .guided-progress { padding-left: 1rem !important; padding-right: 1rem !important; }
     .guided-progress-label { font-size: .62rem; }
     .guided-roll-options { grid-template-columns: 1fr; }
+    .battle-stance-zone { padding: 12px; }
+    .zone-title { font-size: 0.84rem; }
+    .zone-tn-badge { font-size: 0.67rem; }
+    .zone-summary { font-size: 0.98rem; }
+    .zone-rule-highlight { font-size: 0.72rem; }
 }

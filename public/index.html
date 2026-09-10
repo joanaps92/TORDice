@@ -281,6 +281,41 @@
         </div>
     </div>
 
+    <!-- Combat stance rules -->
+    <div class="modal fade stance-details-modal" id="stanceDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content tor-book-panel border-0 shadow-lg">
+                <div class="tor-corner-tl"></div><div class="tor-corner-tr"></div><div class="tor-corner-bl"></div><div class="tor-corner-br"></div>
+                <div class="modal-header border-bottom-0 align-items-start">
+                    <div>
+                        <div class="tor-mini-header mb-1">REGLAS DE COMBATE</div>
+                        <h5 class="modal-title logo-text fs-4" id="stance-details-title">Posición</h5>
+                        <p class="stance-details-subtitle mb-0" id="stance-details-subtitle"></p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body pt-2">
+                    <p class="stance-details-intro" id="stance-details-intro"></p>
+                    <div class="stance-details-section">
+                        <span class="stance-details-label">Efectos</span>
+                        <ul id="stance-details-effects"></ul>
+                    </div>
+                    <div class="stance-details-section stance-details-task">
+                        <span class="stance-details-label">Tarea de combate</span>
+                        <p id="stance-details-task"></p>
+                    </div>
+                    <div class="stance-details-section stance-details-note d-none" id="stance-details-note">
+                        <span class="stance-details-label">Restricción</span>
+                        <p id="stance-details-note-text"></p>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-tor-primary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Room Selection Screen (Formerly Login) -->
     <div id="room-selection-screen" class="container d-none align-items-center justify-content-center min-vh-100 py-4">
         <div class="card border-0 shadow-lg p-4 p-md-5 login-card animate-fade-in tor-book-panel position-relative">
@@ -604,8 +639,11 @@
                                                 <span class="zone-title"><i class="fa-solid fa-khanda me-1"></i> POSICIÓN DE VANGUARDIA</span>
                                                 <span class="zone-subtitle d-block">(COMBATE CUERPO A CUERPO)</span>
                                             </div>
-                                            <span class="zone-tn-badge badge-tn-vanguardia">TN 6 · +1d / Intimidar</span>
+                                            <span class="zone-tn-badge badge-tn-vanguardia">+1d al ataque</span>
                                         </div>
+                                        <p class="zone-summary">Ataca con fuerza, pero te expones a las represalias.</p>
+                                        <div class="zone-rule-highlight"><i class="fa-solid fa-bullhorn me-1"></i> Tarea: Intimidar a un enemigo</div>
+                                        <button type="button" class="zone-details-btn" data-stance-details="vanguardia" aria-label="Ver detalles de la posición de vanguardia"><i class="fa-solid fa-book-open me-1"></i> Ver detalles</button>
                                         <div class="zone-players d-flex flex-wrap gap-2 mt-2" id="players-vanguardia">
                                             <!-- Player tokens will appear here -->
                                         </div>
@@ -620,8 +658,11 @@
                                                         <span class="zone-title"><i class="fa-solid fa-shield-halved me-1"></i> POSICIÓN ABIERTA</span>
                                                         <span class="zone-subtitle d-block">(COMBATE CUERPO A CUERPO)</span>
                                                     </div>
-                                                    <span class="zone-tn-badge badge-tn-abierta">TN 9 · Reagrupar</span>
+                                                    <span class="zone-tn-badge badge-tn-abierta">Sin modificadores</span>
                                                 </div>
+                                                <p class="zone-summary">Luchas de forma equilibrada, atento a tus enemigos.</p>
+                                                <div class="zone-rule-highlight"><i class="fa-solid fa-people-arrows me-1"></i> Tarea: Reagrupar a los camaradas</div>
+                                                <button type="button" class="zone-details-btn" data-stance-details="abierta" aria-label="Ver detalles de la posición abierta"><i class="fa-solid fa-book-open me-1"></i> Ver detalles</button>
                                                 <div class="zone-players d-flex flex-wrap gap-2 mt-2" id="players-abierta">
                                                     <!-- Player tokens will appear here -->
                                                 </div>
@@ -635,8 +676,11 @@
                                                         <span class="zone-title"><i class="fa-solid fa-shield me-1"></i> POSICIÓN DEFENSIVA</span>
                                                         <span class="zone-subtitle d-block">(COMBATE CUERPO A CUERPO)</span>
                                                     </div>
-                                                    <span class="zone-tn-badge badge-tn-defensiva">TN 12 · -1d / Proteger</span>
+                                                    <span class="zone-tn-badge badge-tn-defensiva">-1d al recibir</span>
                                                 </div>
+                                                <p class="zone-summary">Proteges tu posición y a tus compañeros sin ceder terreno.</p>
+                                                <div class="zone-rule-highlight"><i class="fa-solid fa-user-shield me-1"></i> Tarea: Proteger a un compañero</div>
+                                                <button type="button" class="zone-details-btn" data-stance-details="defensiva" aria-label="Ver detalles de la posición defensiva"><i class="fa-solid fa-book-open me-1"></i> Ver detalles</button>
                                                 <div class="zone-players d-flex flex-wrap gap-2 mt-2" id="players-defensiva">
                                                     <!-- Player tokens will appear here -->
                                                 </div>
@@ -651,8 +695,11 @@
                                                 <span class="zone-title"><i class="fa-solid fa-crosshairs me-1"></i> POSICIÓN DE RETAGUARDIA</span>
                                                 <span class="zone-subtitle d-block">(COMBATE A DISTANCIA)</span>
                                             </div>
-                                            <span class="zone-tn-badge badge-tn-retaguardia">A Distancia · Preparar Disparo</span>
+                                            <span class="zone-tn-badge badge-tn-retaguardia">Solo a distancia</span>
                                         </div>
+                                        <p class="zone-summary">Ataca desde lejos, fuera de la presión del cuerpo a cuerpo.</p>
+                                        <div class="zone-rule-highlight"><i class="fa-solid fa-crosshairs me-1"></i> Tarea: Preparar disparo</div>
+                                        <button type="button" class="zone-details-btn" data-stance-details="retaguardia" aria-label="Ver detalles de la posición de retaguardia"><i class="fa-solid fa-book-open me-1"></i> Ver detalles</button>
                                         <div class="zone-players d-flex flex-wrap gap-2 mt-2" id="players-retaguardia">
                                             <!-- Player tokens will appear here -->
                                         </div>

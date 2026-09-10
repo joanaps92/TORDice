@@ -133,6 +133,74 @@ const playersAbierta = document.getElementById('players-abierta');
 const playersDefensiva = document.getElementById('players-defensiva');
 const playersRetaguardia = document.getElementById('players-retaguardia');
 const battleZones = document.querySelectorAll('.battle-stance-zone');
+const stanceDetailsModalElement = document.getElementById('stanceDetailsModal');
+const stanceDetailsModal = stanceDetailsModalElement && window.bootstrap
+    ? bootstrap.Modal.getOrCreateInstance(stanceDetailsModalElement)
+    : null;
+const stanceDetailsTitle = document.getElementById('stance-details-title');
+const stanceDetailsSubtitle = document.getElementById('stance-details-subtitle');
+const stanceDetailsIntro = document.getElementById('stance-details-intro');
+const stanceDetailsEffects = document.getElementById('stance-details-effects');
+const stanceDetailsTask = document.getElementById('stance-details-task');
+const stanceDetailsNote = document.getElementById('stance-details-note');
+const stanceDetailsNoteText = document.getElementById('stance-details-note-text');
+
+const stanceDetails = {
+    vanguardia: {
+        title: 'Posición de vanguardia',
+        subtitle: 'Combate cuerpo a cuerpo',
+        intro: 'Intentas aprovechar cualquier oportunidad de ataque, hasta el punto de exponerte a las represalias de los enemigos.',
+        effects: [
+            'Puedes sumar (1d) a las tiradas de ataque.',
+            'Todos los ataques cuerpo a cuerpo dirigidos contra ti pueden sumar (1d).'
+        ],
+        task: 'Intimidar a un enemigo.'
+    },
+    abierta: {
+        title: 'Posición abierta',
+        subtitle: 'Combate cuerpo a cuerpo',
+        intro: 'Luchas sin escatimar esfuerzos, pero prestando la debida atención a las acciones de los enemigos.',
+        effects: ['Sin ventaja ni desventaja.'],
+        task: 'Reagrupar a los camaradas.'
+    },
+    defensiva: {
+        title: 'Posición defensiva',
+        subtitle: 'Combate cuerpo a cuerpo',
+        intro: 'Luchas de forma conservadora, tratando de protegerte a ti mismo o a los demás y sin ceder terreno.',
+        effects: [
+            'Todos los ataques cuerpo a cuerpo dirigidos contra ti deben restar (1d).',
+            'Tus tiradas de ataque deben restar (1d) por cada oponente al que te enfrentes.'
+        ],
+        task: 'Proteger a un compañero.'
+    },
+    retaguardia: {
+        title: 'Posición de retaguardia',
+        subtitle: 'Combate a distancia',
+        intro: 'Te alejas de la presión del combate cuerpo a cuerpo para atacar a tus enemigos desde lejos.',
+        effects: [
+            'Solo puedes atacar a tus adversarios con armas a distancia.',
+            'Solo puedes ser objetivo de atacantes que utilicen armas similares.'
+        ],
+        task: 'Preparar disparo.',
+        note: 'Solo puedes adoptar esta posición si el número total de enemigos no es superior al doble del número de aventureros. Además, por cada héroe en Retaguardia debe haber otros dos aventureros luchando cuerpo a cuerpo.'
+    }
+};
+
+document.querySelectorAll('.zone-details-btn').forEach(button => {
+    button.addEventListener('click', event => {
+        event.stopPropagation();
+        const details = stanceDetails[button.dataset.stanceDetails];
+        if (!details || !stanceDetailsModal) return;
+        stanceDetailsTitle.textContent = details.title;
+        stanceDetailsSubtitle.textContent = details.subtitle;
+        stanceDetailsIntro.textContent = details.intro;
+        stanceDetailsEffects.innerHTML = details.effects.map(effect => `<li>${effect}</li>`).join('');
+        stanceDetailsTask.textContent = details.task;
+        stanceDetailsNote.classList.toggle('d-none', !details.note);
+        stanceDetailsNoteText.textContent = details.note || '';
+        stanceDetailsModal.show();
+    });
+});
 
 // Culture and occupation catalogs imported from guia-creacion-personajes.
 let cultures = [];
