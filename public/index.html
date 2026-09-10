@@ -358,6 +358,9 @@
             <button class="btn btn-outline-danger w-100 py-2 mb-2 open-adventurer-btn" type="button">
                 <i class="fa-solid fa-feather-pointed me-2"></i>CREAR AVENTURERO
             </button>
+            <button id="open-adventure-mode-btn" class="btn btn-outline-dark w-100 py-2 mb-3" type="button">
+                <i class="fa-solid fa-book-open me-2"></i>MODO AVENTURAS
+            </button>
 
             <!-- Room List Section -->
             <div id="room-list-container" class="mt-2 d-none">
@@ -719,6 +722,102 @@
             <span class="tor-leaf-flourish">🌿</span>
         </div>
     </div>
+
+    <!-- Narrative adventures screen -->
+    <main id="adventure-screen" class="adventure-screen d-none">
+        <div class="adventure-page">
+            <header class="adventure-header">
+                <button id="adventure-back-btn" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-arrow-left me-1"></i> Salas</button>
+                <div>
+                    <p class="adventure-kicker">EL ANILLO ÚNICO · MODO AVENTURAS</p>
+                    <h1>Crónicas de la Tierra Media</h1>
+                    <p class="adventure-lead">Elige una historia, prepara a tu héroe y deja que cada decisión cambie el camino.</p>
+                </div>
+                <button id="adventure-refresh-btn" class="btn btn-outline-secondary btn-sm" title="Actualizar aventuras"><i class="fa-solid fa-rotate me-1"></i> Actualizar</button>
+            </header>
+
+            <div class="adventure-layout">
+                <section class="adventure-panel adventure-catalog-panel">
+                    <div class="adventure-panel-heading">
+                        <div>
+                            <span class="adventure-panel-kicker">RELATOS DISPONIBLES</span>
+                            <h2>Selecciona una aventura</h2>
+                        </div>
+                        <span id="adventure-catalog-count" class="adventure-count-badge">0</span>
+                    </div>
+                    <div id="adventure-list" class="adventure-list">
+                        <div class="adventure-loading"><i class="fa-solid fa-spinner fa-spin me-2"></i>Cargando relatos…</div>
+                    </div>
+
+                    <div class="adventure-character-box">
+                        <label for="adventure-character-select" class="adventure-field-label"><i class="fa-solid fa-user-shield me-1"></i> Personaje de la crónica</label>
+                        <select id="adventure-character-select" class="form-select tor-select">
+                            <option value="">Cargando personajes…</option>
+                        </select>
+                        <small id="adventure-character-note" class="adventure-field-note">El personaje se usará para calcular las tiradas de habilidad.</small>
+                    </div>
+                </section>
+
+                <section class="adventure-panel adventure-sessions-panel">
+                    <div class="adventure-panel-heading">
+                        <div>
+                            <span class="adventure-panel-kicker">TUS CRÓNICAS</span>
+                            <h2>Partidas guardadas</h2>
+                        </div>
+                    </div>
+                    <div id="adventure-session-list" class="adventure-session-list">
+                        <p class="adventure-empty-note">Todavía no has comenzado ninguna crónica.</p>
+                    </div>
+                </section>
+            </div>
+
+            <section id="adventure-session-panel" class="adventure-panel adventure-story-panel d-none">
+                <div class="adventure-story-heading">
+                    <div>
+                        <span class="adventure-panel-kicker" id="adventure-session-status">CRÓNICA ACTIVA</span>
+                        <h2 id="adventure-session-title">Aventura</h2>
+                        <p id="adventure-session-character" class="adventure-story-character"></p>
+                    </div>
+                    <div id="adventure-state-badges" class="adventure-state-badges"></div>
+                </div>
+
+                <div class="adventure-scene-card">
+                    <span class="adventure-scene-label">ESCENA ACTUAL</span>
+                    <h3 id="adventure-scene-title">—</h3>
+                    <p id="adventure-scene-text"></p>
+                </div>
+
+                <div id="adventure-pending-roll" class="adventure-roll-box d-none">
+                    <div class="adventure-roll-icon"><i class="fa-solid fa-dice-d20"></i></div>
+                    <div class="flex-grow-1">
+                        <span class="adventure-scene-label">PRUEBA DE HABILIDAD</span>
+                        <h3 id="adventure-roll-label">Tirada pendiente</h3>
+                        <p id="adventure-roll-skill" class="mb-0"></p>
+                    </div>
+                    <button id="adventure-roll-btn" class="btn btn-tor-primary"><i class="fa-solid fa-dice me-1"></i> Lanzar</button>
+                </div>
+                <div id="adventure-roll-result" class="adventure-roll-result d-none"></div>
+
+                <div id="adventure-choice-section" class="adventure-choice-section">
+                    <div class="adventure-choice-heading">
+                        <span class="adventure-scene-label">DECIDE TU SIGUIENTE PASO</span>
+                        <span class="adventure-choice-hint">La crónica se guarda automáticamente</span>
+                    </div>
+                    <div id="adventure-choices" class="adventure-choices"></div>
+                </div>
+                <div id="adventure-completed-box" class="adventure-completed-box d-none">
+                    <i class="fa-solid fa-star"></i>
+                    <div><strong>Crónica completada</strong><p>Has llegado al final de este relato. Puedes volver a jugarlo con otro camino o personaje.</p></div>
+                    <button id="adventure-restart-btn" class="btn btn-outline-danger btn-sm">Jugar de nuevo</button>
+                </div>
+
+                <details class="adventure-history-details">
+                    <summary><i class="fa-solid fa-scroll me-2"></i>Ver crónica recorrida</summary>
+                    <div id="adventure-history" class="adventure-history"></div>
+                </details>
+            </section>
+        </div>
+    </main>
 
     <!-- Adventurer sheet -->
     <main id="adventurer-screen" class="adventurer-screen d-none">

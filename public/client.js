@@ -67,6 +67,11 @@ let currentStance = "Posición abierta";
 let currentD12Count = 1;
 let currentD6Count = 0;
 let currentRollMode = 'manual';
+let adventureCatalog = [];
+let adventureCharacters = [];
+let adventureSessions = [];
+let selectedAdventureId = '';
+let currentAdventureSession = null;
 
 // Persistence helpers for last session
 const LAST_USER_KEY = 'rpg_last_username';
@@ -87,6 +92,32 @@ const joinBtn = document.getElementById('join-btn');
 const roomnameInput = document.getElementById('roomname');
 const userDisplay = document.getElementById('user-display');
 const roomDisplay = document.getElementById('room-display');
+const adventureScreen = document.getElementById('adventure-screen');
+const openAdventureModeBtn = document.getElementById('open-adventure-mode-btn');
+const adventureBackBtn = document.getElementById('adventure-back-btn');
+const adventureRefreshBtn = document.getElementById('adventure-refresh-btn');
+const adventureList = document.getElementById('adventure-list');
+const adventureCatalogCount = document.getElementById('adventure-catalog-count');
+const adventureCharacterSelect = document.getElementById('adventure-character-select');
+const adventureCharacterNote = document.getElementById('adventure-character-note');
+const adventureSessionList = document.getElementById('adventure-session-list');
+const adventureSessionPanel = document.getElementById('adventure-session-panel');
+const adventureSessionStatus = document.getElementById('adventure-session-status');
+const adventureSessionTitle = document.getElementById('adventure-session-title');
+const adventureSessionCharacter = document.getElementById('adventure-session-character');
+const adventureStateBadges = document.getElementById('adventure-state-badges');
+const adventureSceneTitle = document.getElementById('adventure-scene-title');
+const adventureSceneText = document.getElementById('adventure-scene-text');
+const adventurePendingRoll = document.getElementById('adventure-pending-roll');
+const adventureRollLabel = document.getElementById('adventure-roll-label');
+const adventureRollSkill = document.getElementById('adventure-roll-skill');
+const adventureRollBtn = document.getElementById('adventure-roll-btn');
+const adventureRollResult = document.getElementById('adventure-roll-result');
+const adventureChoiceSection = document.getElementById('adventure-choice-section');
+const adventureChoices = document.getElementById('adventure-choices');
+const adventureCompletedBox = document.getElementById('adventure-completed-box');
+const adventureRestartBtn = document.getElementById('adventure-restart-btn');
+const adventureHistory = document.getElementById('adventure-history');
 
 // Dice Control Elements
 const d12ValBadge = document.getElementById('d12-val-badge');
@@ -1332,6 +1363,285 @@ if (useSuggestionBtn) {
         }, 1500);
     });
 }
+
+// ==========================================
+// NARRATIVE ADVENTURES
+// ==========================================
+
+function adventureAuthHeaders(json = false) {
+    const headers = { Authorization: `Bearer ${localStorage.getItem('rpg_auth_token') || ''}` };
+    if (json) headers['Content-Type'] = 'application/json';
+    return headers;
+}
+
+async function adventureRequest(path, options = {}) {
+    const response = await fetch(path, {
+        ...options,
+        headers: { ...adventureAuthHeaders(Boolean(options.body)), ...(options.headers || {}) }
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'No se pudo completar la operación.');
+    return data;
+}
+
+function selectedAdventure() {
+    return adventureCatalog.find(adventure => adventure.id === selectedAdventureId) || adventureCatalog[0] || null;
+}
+
+function renderAdventureCatalog() {
+    if (!adventureList) return;
+    adventureCatalogCount.textContent = adventureCatalog.length;
+    if (!adventureCatalog.length) {
+        adventureList.innerHTML = '<p class="adventure-empty-note">No hay relatos publicados todavía.</p>';
+        return;
+    }
+
+    if (!selectedAdventureId || !adventureCatalog.some(adventure => adventure.id === selectedAdventureId)) {
+        selectedAdventureId = adventureCatalog[0].id;
+    }
+
+    adventureList.innerHTML = adventureCatalog.map(adventure => {
+        const isSelected = adventure.id === selectedAdventureId;
+        const activeSession = (adventure.activeSessions || []).find(session => session.status === 'active');
+        return `
+            <article class="adventure-card ${isSelected ? 'is-selected' : ''}" data-adventure-id="${escapeHtml(adventure.id)}" tabindex="0">
+                <div class="adventure-card-icon"><i class="fa-solid fa-compass"></i></div>
+                <div class="adventure-card-body">
+                    <div class="adventure-card-title-row"><h3>${escapeHtml(adventure.title)}</h3>${activeSession ? '<span class="adventure-active-pill">En curso</span>' : ''}</div>
+                    <p>${escapeHtml(adventure.description)}</p>
+                    <div class="adventure-card-meta"><span><i class="fa-regular fa-clock me-1"></i>${escapeHtml(adventure.duration || 'Duración variable')}</span><span><i class="fa-solid fa-shield-halved me-1"></i>${escapeHtml(adventure.difficulty || 'Sin clasificar')}</span></div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger adventure-start-card-btn">${activeSession ? 'Continuar' : 'Comenzar'}</button>
+            </article>
+        `;
+    }).join('');
+
+    adventureList.querySelectorAll('.adventure-card').forEach(card => {
+        const select = () => {
+            selectedAdventureId = card.dataset.adventureId;
+            renderAdventureCatalog();
+            updateAdventureCharacterNote();
+        };
+        card.addEventListener('click', select);
+        card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); select(); } });
+        card.querySelector('.adventure-start-card-btn').addEventListener('click', event => {
+            event.stopPropagation();
+            startAdventure(card.dataset.adventureId);
+        });
+    });
+    updateAdventureCharacterNote();
+}
+
+function updateAdventureCharacterNote() {
+    const selected = selectedAdventure();
+    if (!adventureCharacterNote || !selected) return;
+    const active = (selected.activeSessions || []).length;
+    adventureCharacterNote.textContent = active
+        ? 'Ya tienes una partida guardada para este relato; puedes continuarla desde el panel de crónicas.'
+        : 'El personaje se usará para calcular las tiradas de habilidad.';
+}
+
+function renderAdventureCharacters() {
+    if (!adventureCharacterSelect) return;
+    if (!adventureCharacters.length) {
+        adventureCharacterSelect.innerHTML = '<option value="">No hay personajes disponibles</option>';
+        return;
+    }
+    const previous = adventureCharacterSelect.value;
+    adventureCharacterSelect.innerHTML = adventureCharacters.map(character => `
+        <option value="${escapeHtml(character.id)}">${escapeHtml(character.nombre)}${character.description ? ` · ${escapeHtml(character.description)}` : ''}</option>
+    `).join('');
+    if (adventureCharacters.some(character => character.id === previous)) adventureCharacterSelect.value = previous;
+}
+
+function adventureTitleForSession(session) {
+    return adventureCatalog.find(adventure => adventure.id === session.adventureId)?.title || session.adventureId;
+}
+
+function renderAdventureSessions() {
+    if (!adventureSessionList) return;
+    if (!adventureSessions.length) {
+        adventureSessionList.innerHTML = '<p class="adventure-empty-note">Todavía no has comenzado ninguna crónica.</p>';
+        return;
+    }
+    adventureSessionList.innerHTML = adventureSessions.map(session => {
+        const title = adventureTitleForSession(session);
+        const status = session.status === 'active' ? 'En curso' : 'Completada';
+        const statusClass = session.status === 'active' ? 'active' : 'completed';
+        const date = session.updatedAt ? new Date(session.updatedAt).toLocaleDateString('es-ES') : '';
+        return `
+            <button type="button" class="adventure-session-item" data-session-id="${escapeHtml(session.id)}">
+                <span class="adventure-session-item-icon"><i class="fa-solid ${session.status === 'active' ? 'fa-feather-pointed' : 'fa-check'}"></i></span>
+                <span class="adventure-session-item-body"><strong>${escapeHtml(title)}</strong><small>${status} · ${date}</small></span>
+                <span class="adventure-session-status ${statusClass}">${status}</span>
+            </button>
+        `;
+    }).join('');
+    adventureSessionList.querySelectorAll('[data-session-id]').forEach(button => button.addEventListener('click', () => loadAdventureSession(button.dataset.sessionId)));
+}
+
+function renderAdventureState(session) {
+    const state = session.adventureState || {};
+    const badges = [];
+    if (Number(state.maxHope) > 0) badges.push(`<span class="adventure-state-badge hope"><i class="fa-solid fa-heart me-1"></i>Esperanza ${Number(state.hope) || 0}/${Number(state.maxHope)}</span>`);
+    if (Number(state.maxEndurance) > 0) badges.push(`<span class="adventure-state-badge endurance"><i class="fa-solid fa-bolt me-1"></i>Aguante ${Number(state.endurance) || 0}/${Number(state.maxEndurance)}</span>`);
+    Object.entries(session.storyFlags || {}).filter(([, value]) => value === true).forEach(([key]) => badges.push(`<span class="adventure-state-badge flag"><i class="fa-solid fa-flag me-1"></i>${escapeHtml(key)}</span>`));
+    adventureStateBadges.innerHTML = badges.join('');
+}
+
+function renderAdventureHistory(session) {
+    if (!adventureHistory) return;
+    const history = session.history || [];
+    adventureHistory.innerHTML = history.length
+        ? history.map(entry => `<div class="adventure-history-entry"><span>${escapeHtml(entry.type === 'SCENE' ? 'Escena' : entry.type === 'CHOICE' ? 'Decisión' : 'Tirada')}</span><p>${escapeHtml(entry.text)}</p></div>`).join('')
+        : '<p class="adventure-empty-note">Aún no hay acontecimientos registrados.</p>';
+}
+
+function renderAdventureSession(session, roll = null) {
+    currentAdventureSession = session;
+    adventureSessionPanel.classList.remove('d-none');
+    adventureSessionTitle.textContent = session.adventure?.title || adventureTitleForSession(session);
+    adventureSessionCharacter.textContent = session.character?.nombre ? `Interpretando a ${session.character.nombre}` : '';
+    adventureSessionStatus.textContent = session.status === 'completed' ? 'CRÓNICA COMPLETADA' : 'CRÓNICA ACTIVA';
+    adventureSceneTitle.textContent = session.scene?.title || 'Fin de la crónica';
+    adventureSceneText.textContent = session.scene?.text || 'La historia ha llegado a su conclusión.';
+    renderAdventureState(session);
+    renderAdventureHistory(session);
+
+    const pendingRoll = session.pendingRoll;
+    adventurePendingRoll.classList.toggle('d-none', !pendingRoll);
+    adventureChoiceSection.classList.toggle('d-none', Boolean(pendingRoll) || session.status === 'completed');
+    adventureCompletedBox.classList.toggle('d-none', session.status !== 'completed');
+    if (pendingRoll) {
+        adventureRollLabel.textContent = pendingRoll.label || 'Resolver la prueba';
+        adventureRollSkill.textContent = `Habilidad: ${displayName(pendingRoll.skill)}`;
+    }
+    adventureChoices.innerHTML = (session.scene?.choices || []).map(choice => `
+        <button type="button" class="adventure-choice-btn" data-choice-id="${escapeHtml(choice.id)}">
+            <span class="adventure-choice-number"><i class="fa-solid ${choice.skillCheck ? 'fa-dice-d20' : 'fa-arrow-right'}"></i></span>
+            <span><strong>${escapeHtml(choice.text)}</strong>${choice.skillCheck ? '<small>Requiere una tirada de habilidad</small>' : ''}</span>
+            <i class="fa-solid fa-chevron-right ms-auto"></i>
+        </button>
+    `).join('');
+    adventureChoices.querySelectorAll('[data-choice-id]').forEach(button => button.addEventListener('click', () => chooseAdventureChoice(button.dataset.choiceId)));
+    if (roll) showAdventureRollResult(roll);
+    else adventureRollResult.classList.add('d-none');
+    adventureSessionPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showAdventureRollResult(roll) {
+    const success = roll.outcome === 'success' || roll.success;
+    adventureRollResult.className = `adventure-roll-result ${success ? 'success' : 'failure'}`;
+    adventureRollResult.innerHTML = `<i class="fa-solid ${success ? 'fa-circle-check' : 'fa-circle-xmark'}"></i><span><strong>${success ? 'Éxito' : 'Fallo'}</strong><small>Resultado ${escapeHtml(roll.total)} contra NO ${escapeHtml(roll.targetNumber)}</small></span>`;
+    adventureRollResult.classList.remove('d-none');
+}
+
+async function loadAdventureSession(sessionId) {
+    try {
+        const session = await adventureRequest(`/api/adventure-sessions/${encodeURIComponent(sessionId)}`);
+        renderAdventureSession(session);
+    } catch (error) {
+        appAlert(error.message, 'No se pudo cargar la crónica');
+    }
+}
+
+async function chooseAdventureChoice(choiceId) {
+    if (!currentAdventureSession) return;
+    const buttons = [...adventureChoices.querySelectorAll('button')];
+    buttons.forEach(button => { button.disabled = true; });
+    try {
+        const data = await adventureRequest(`/api/adventure-sessions/${currentAdventureSession.id}/choices`, {
+            method: 'POST', body: JSON.stringify({ choiceId })
+        });
+        renderAdventureSession(data.session);
+        await loadAdventureModeData(false);
+    } catch (error) {
+        buttons.forEach(button => { button.disabled = false; });
+        appAlert(error.message, 'Decisión no disponible');
+    }
+}
+
+async function resolveAdventureRoll() {
+    if (!currentAdventureSession) return;
+    adventureRollBtn.disabled = true;
+    adventureRollBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Lanzando…';
+    try {
+        const data = await adventureRequest(`/api/adventure-sessions/${currentAdventureSession.id}/roll`, { method: 'POST', body: '{}' });
+        renderAdventureSession(data.session, data.roll);
+        await loadAdventureModeData(false);
+    } catch (error) {
+        appAlert(error.message, 'No se pudo resolver la tirada');
+    } finally {
+        adventureRollBtn.disabled = false;
+        adventureRollBtn.innerHTML = '<i class="fa-solid fa-dice me-1"></i> Lanzar';
+    }
+}
+
+async function startAdventure(adventureId = selectedAdventureId) {
+    const characterId = adventureCharacterSelect?.value;
+    if (!adventureId || !characterId) {
+        appAlert('Selecciona una aventura y un personaje antes de comenzar.', 'Preparar crónica');
+        return;
+    }
+    const startButton = adventureList.querySelector(`[data-adventure-id="${CSS.escape(adventureId)}"] .adventure-start-card-btn`);
+    if (startButton) startButton.classList.add('fa-spin');
+    try {
+        const session = await adventureRequest('/api/adventure-sessions', { method: 'POST', body: JSON.stringify({ adventureId, characterId }) });
+        renderAdventureSession(session);
+        await loadAdventureModeData(false);
+    } catch (error) {
+        appAlert(error.message, 'No se pudo comenzar la aventura');
+    } finally {
+        if (startButton) startButton.classList.remove('fa-spin');
+    }
+}
+
+async function loadAdventureModeData(resetSession = true) {
+    if (isLocalFile) {
+        adventureList.innerHTML = '<p class="adventure-empty-note">El modo Aventuras necesita una conexión con el servidor.</p>';
+        return;
+    }
+    try {
+        const [catalog, characters, sessions] = await Promise.all([
+            adventureRequest('/api/adventures'), adventureRequest('/api/adventure-characters'), adventureRequest('/api/adventure-sessions')
+        ]);
+        adventureCatalog = catalog;
+        adventureCharacters = characters;
+        adventureSessions = sessions;
+        renderAdventureCatalog();
+        renderAdventureCharacters();
+        renderAdventureSessions();
+        if (resetSession) {
+            currentAdventureSession = null;
+            adventureSessionPanel.classList.add('d-none');
+        }
+    } catch (error) {
+        adventureList.innerHTML = `<p class="adventure-empty-note text-danger">${escapeHtml(error.message)}</p>`;
+    }
+}
+
+function openAdventureMode() {
+    roomSelectionScreen.classList.add('d-none');
+    appScreen.classList.add('d-none');
+    adventurerScreen.classList.add('d-none');
+    adventureScreen.classList.remove('d-none');
+    adventureScreen.classList.add('d-block');
+    loadAdventureModeData();
+}
+
+if (openAdventureModeBtn) openAdventureModeBtn.addEventListener('click', openAdventureMode);
+if (adventureBackBtn) adventureBackBtn.addEventListener('click', () => {
+    adventureScreen.classList.add('d-none');
+    roomSelectionScreen.classList.remove('d-none');
+    roomSelectionScreen.classList.add('d-flex');
+});
+if (adventureRefreshBtn) adventureRefreshBtn.addEventListener('click', () => loadAdventureModeData(false));
+if (adventureRollBtn) adventureRollBtn.addEventListener('click', resolveAdventureRoll);
+if (adventureRestartBtn) adventureRestartBtn.addEventListener('click', () => startAdventure(currentAdventureSession?.adventure?.id || selectedAdventureId));
+if (adventureList) adventureList.addEventListener('dblclick', event => {
+    const card = event.target.closest('[data-adventure-id]');
+    if (card) startAdventure(card.dataset.adventureId);
+});
 
 // Run on page load
 initLastSessionSuggestion();

@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         forgotPasswordScreen.classList.add('d-none');
         roomSelectionScreen.classList.add('d-none');
         appScreen.classList.add('d-none');
+        document.getElementById('adventure-screen').classList.add('d-none');
         document.getElementById('adventurer-screen').classList.add('d-none');
         screen.classList.remove('d-none');
         screen.classList.add('d-flex');
