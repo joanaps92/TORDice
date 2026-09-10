@@ -1485,7 +1485,11 @@ function renderAdventureState(session) {
     const badges = [];
     if (Number(state.maxHope) > 0) badges.push(`<span class="adventure-state-badge hope"><i class="fa-solid fa-heart me-1"></i>Esperanza ${Number(state.hope) || 0}/${Number(state.maxHope)}</span>`);
     if (Number(state.maxEndurance) > 0) badges.push(`<span class="adventure-state-badge endurance"><i class="fa-solid fa-bolt me-1"></i>Aguante ${Number(state.endurance) || 0}/${Number(state.maxEndurance)}</span>`);
-    Object.entries(session.storyFlags || {}).filter(([, value]) => value === true).forEach(([key]) => badges.push(`<span class="adventure-state-badge flag"><i class="fa-solid fa-flag me-1"></i>${escapeHtml(key)}</span>`));
+    const flagLabels = { discoveredOrcTracks: 'Rastro de orcos descubierto' };
+    Object.entries(session.storyFlags || {}).filter(([, value]) => value === true).forEach(([key]) => {
+        const label = flagLabels[key] || key.replace(/([a-z])([A-Z])/g, '$1 $2');
+        badges.push(`<span class="adventure-state-badge flag"><i class="fa-solid fa-flag me-1"></i>${escapeHtml(label)}</span>`);
+    });
     adventureStateBadges.innerHTML = badges.join('');
 }
 
