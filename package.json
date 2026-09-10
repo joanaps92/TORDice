@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "test": "node --test",
     "validate:cultures": "node scripts/validate-cultures.js",
     "validate:occupations": "node scripts/validate-occupations.js",
     "validate:equipment": "node scripts/validate-equipment.js"

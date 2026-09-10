@@ -53,9 +53,32 @@ const adventurerSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
+const adventureHistorySchema = new mongoose.Schema({
+  timestamp: { type: Date, default: Date.now },
+  sceneId: { type: String, required: true },
+  type: { type: String, enum: ['SCENE', 'CHOICE', 'ROLL', 'SYSTEM'], required: true },
+  text: { type: String, required: true },
+  metadata: { type: mongoose.Schema.Types.Mixed }
+}, { _id: false });
+
+const adventureSessionSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  adventureId: { type: String, required: true, index: true },
+  characterId: { type: String, required: true },
+  currentSceneId: { type: String, required: true },
+  status: { type: String, enum: ['active', 'completed', 'abandoned'], default: 'active', index: true },
+  storyFlags: { type: mongoose.Schema.Types.Mixed, default: {} },
+  adventureState: { type: mongoose.Schema.Types.Mixed, default: {} },
+  pendingRoll: { type: mongoose.Schema.Types.Mixed, default: null },
+  history: { type: [adventureHistorySchema], default: [] },
+  startedAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
 const Roll = mongoose.model('Roll', rollSchema);
 const Room = mongoose.model('Room', roomSchema);
 const Adventurer = mongoose.model('Adventurer', adventurerSchema);
+const AdventureSession = mongoose.model('AdventureSession', adventureSessionSchema);
 const User = mongoose.model('User', userSchema);
 
 async function connectDB() {
@@ -63,4 +86,4 @@ async function connectDB() {
   console.log('Conectado a MongoDB');
 }
 
-module.exports = { connectDB, Roll, Room, Adventurer, User };
+module.exports = { connectDB, Roll, Room, Adventurer, AdventureSession, User };

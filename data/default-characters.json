@@ -1,0 +1,32 @@
+[
+  {
+    "id": "arathion",
+    "nombre": "Arathion",
+    "description": "Dúnedain del Norte",
+    "ficha": {
+      "trancos": false,
+      "informacionGeneral": {
+        "nombre": "Arathion",
+        "culturaHeroica": "Dúnedain del Norte",
+        "ocupacion": "Buscador de tesoros"
+      },
+      "atributos": {
+        "fuerza": { "valor": 5, "tn": 15 },
+        "corazon": { "valor": 5, "tn": 15 },
+        "mente": { "valor": 5, "tn": 15 }
+      },
+      "estadisticas": {
+        "aguante": { "maximo": 25, "actual": 25 },
+        "esperanza": { "maxima": 11, "actual": 11 }
+      },
+      "habilidades": {
+        "fuerza": {},
+        "corazon": {},
+        "mente": {
+          "alerta": { "rango": 2, "favorecida": false },
+          "explorar": { "rango": 2, "favorecida": false }
+        }
+      }
+    }
+  }
+]

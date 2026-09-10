@@ -6,7 +6,10 @@ require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
-const { connectDB, Roll, Room, Adventurer, User } = require('./db');
+const { connectDB, Roll, Room, Adventurer, AdventureSession, User } = require('./db');
+const { AdventureEngine } = require('./services/adventure-engine');
+const { getDefaultCharacter, listAdventures, loadAdventure } = require('./services/adventure-loader');
+const { getSkillRollProfile, normalizeCombatKey, rollDice, resolveSkillRoll } = require('./services/dice-engine');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_for_tordice';
 
@@ -70,11 +73,6 @@ const canUserViewAdventurer = (adventurer, user) => {
 
 const canViewAdventurer = (adventurer, req) => canUserViewAdventurer(adventurer, req.user);
 const canEditAdventurer = (adventurer, req) => req.user.role === 'admin' || isAdventurerOwner(adventurer, req);
-const normalizeCombatKey = value => {
-    const normalized = String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-    return { hacha: 'hachas', hachas: 'hachas', arco: 'arcos', arcos: 'arcos', lanza: 'lanzas', lanzas: 'lanzas', espada: 'espadas', espadas: 'espadas', pelea: 'pelea' }[normalized] || normalized;
-};
-
 // --- AUTHENTICATION ROUTES ---
 
 app.post('/api/login', async (req, res) => {
@@ -361,6 +359,291 @@ app.put('/api/adventurers/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// --- ADVENTURES ---
+
+async function resolveAdventureCharacter(characterId, user) {
+    const normalizedId = String(characterId || '');
+    if (normalizedId.startsWith('default:')) {
+        const defaultCharacter = getDefaultCharacter(normalizedId.slice('default:'.length));
+        if (!defaultCharacter) {
+            const error = new Error('Personaje predeterminado no encontrado.');
+            error.status = 404;
+            throw error;
+        }
+        return {
+            id: normalizedId,
+            nombre: defaultCharacter.nombre,
+            description: defaultCharacter.description || '',
+            ficha: defaultCharacter.ficha,
+            isDefault: true
+        };
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(normalizedId)) {
+        const error = new Error('El personaje indicado no es válido.');
+        error.status = 400;
+        throw error;
+    }
+    const adventurer = await Adventurer.findById(normalizedId);
+    if (!adventurer || !canUserViewAdventurer(adventurer, user)) {
+        const error = new Error('No tienes permiso para usar ese personaje.');
+        error.status = 403;
+        throw error;
+    }
+    return {
+        id: String(adventurer._id),
+        nombre: adventurer.nombre,
+        description: adventurer.ficha?.informacionGeneral?.culturaHeroica || '',
+        ficha: adventurer.ficha || {},
+        isDefault: false
+    };
+}
+
+function adventureSummary(adventure) {
+    return {
+        id: adventure.id,
+        title: adventure.title,
+        description: adventure.description || '',
+        duration: adventure.duration || '',
+        difficulty: adventure.difficulty || '',
+        image: adventure.image || null
+    };
+}
+
+function serializeAdventureSession(sessionDocument, adventure, character) {
+    const session = sessionDocument.toObject ? sessionDocument.toObject() : sessionDocument;
+    const engine = new AdventureEngine(adventure);
+    const scene = engine.getScene(session.currentSceneId);
+    const availableChoices = engine.getAvailableChoices(scene, session.storyFlags || {});
+
+    return {
+        id: String(session._id || session.id),
+        adventure: adventureSummary(adventure),
+        character: character ? {
+            id: character.id,
+            nombre: character.nombre,
+            description: character.description || '',
+            isDefault: Boolean(character.isDefault)
+        } : { id: session.characterId },
+        status: session.status,
+        currentSceneId: session.currentSceneId,
+        scene: scene ? {
+            id: scene.id,
+            title: scene.title || '',
+            text: scene.text,
+            choices: availableChoices.map(choice => ({
+                id: choice.id,
+                text: choice.text,
+                skillCheck: choice.skillCheck ? { skill: choice.skillCheck.skill } : null
+            }))
+        } : null,
+        pendingRoll: session.pendingRoll || null,
+        storyFlags: session.storyFlags || {},
+        adventureState: session.adventureState || {},
+        history: session.history || [],
+        startedAt: session.startedAt,
+        updatedAt: session.updatedAt
+    };
+}
+
+function assignAdventureSession(document, state) {
+    document.currentSceneId = state.currentSceneId;
+    document.status = state.status;
+    document.storyFlags = state.storyFlags;
+    document.adventureState = state.adventureState;
+    document.pendingRoll = state.pendingRoll;
+    document.history = state.history;
+    document.updatedAt = new Date();
+}
+
+function loadAdventureOrThrow(id) {
+    try {
+        return loadAdventure(id);
+    } catch (error) {
+        error.status = error.code === 'ENOENT' ? 404 : 400;
+        throw error;
+    }
+}
+
+async function findAdventureSession(sessionId, userId) {
+    if (!mongoose.Types.ObjectId.isValid(String(sessionId))) return null;
+    return AdventureSession.findOne({ _id: sessionId, userId });
+}
+
+app.get('/api/adventures', authenticateToken, async (req, res) => {
+    try {
+        const adventures = listAdventures();
+        const sessions = await AdventureSession.find({ userId: req.user.id, status: { $ne: 'abandoned' } })
+            .select('_id adventureId characterId status updatedAt')
+            .sort({ updatedAt: -1 })
+            .lean();
+        res.json(adventures.map(adventure => ({
+            ...adventure,
+            activeSessions: sessions.filter(session => session.adventureId === adventure.id)
+        })));
+    } catch (error) {
+        console.error('Error al listar aventuras:', error);
+        res.status(500).json({ error: 'No se pudieron cargar las aventuras.' });
+    }
+});
+
+app.get('/api/adventures/:id', authenticateToken, async (req, res) => {
+    try {
+        res.json(adventureSummary(loadAdventureOrThrow(req.params.id)));
+    } catch (error) {
+        res.status(error.status || 500).json({ error: error.message || 'No se pudo cargar la aventura.' });
+    }
+});
+
+app.get('/api/adventure-characters', authenticateToken, async (req, res) => {
+    try {
+        const query = req.user.role === 'admin'
+            ? {}
+            : {
+                $or: [
+                    { ownerId: req.user.id },
+                    { visibility: 'all' },
+                    { visibility: 'selected', visibleTo: req.user.id }
+                ]
+            };
+        const adventurers = await Adventurer.find(query).sort({ updatedAt: -1 }).lean();
+        const defaults = require('./data/default-characters.json').map(character => ({
+            id: `default:${character.id}`,
+            nombre: character.nombre,
+            description: character.description || '',
+            isDefault: true
+        }));
+        res.json([
+            ...defaults,
+            ...adventurers.map(character => ({
+                id: String(character._id),
+                nombre: character.nombre,
+                description: character.ficha?.informacionGeneral?.culturaHeroica || '',
+                isDefault: false
+            }))
+        ]);
+    } catch (error) {
+        console.error('Error al listar personajes para aventuras:', error);
+        res.status(500).json({ error: 'No se pudieron cargar los personajes.' });
+    }
+});
+
+app.post('/api/adventure-sessions', authenticateToken, async (req, res) => {
+    try {
+        const adventure = loadAdventureOrThrow(req.body?.adventureId);
+        const character = await resolveAdventureCharacter(req.body?.characterId, req.user);
+        const existing = await AdventureSession.findOne({
+            userId: req.user.id,
+            adventureId: adventure.id,
+            characterId: character.id,
+            status: 'active'
+        });
+        if (existing) return res.json(serializeAdventureSession(existing, adventure, character));
+
+        const engine = new AdventureEngine(adventure);
+        const state = engine.createSession({ characterId: character.id, character });
+        const session = await AdventureSession.create({
+            userId: req.user.id,
+            adventureId: adventure.id,
+            characterId: character.id,
+            currentSceneId: state.currentSceneId,
+            status: state.status,
+            storyFlags: state.storyFlags,
+            adventureState: state.adventureState,
+            pendingRoll: state.pendingRoll,
+            history: state.history,
+            startedAt: state.startedAt,
+            updatedAt: state.updatedAt
+        });
+        res.status(201).json(serializeAdventureSession(session, adventure, character));
+    } catch (error) {
+        console.error('Error al iniciar aventura:', error);
+        res.status(error.status || 400).json({ error: error.message || 'No se pudo iniciar la aventura.' });
+    }
+});
+
+app.get('/api/adventure-sessions', authenticateToken, async (req, res) => {
+    try {
+        const sessions = await AdventureSession.find({ userId: req.user.id }).sort({ updatedAt: -1 }).lean();
+        res.json(sessions.map(session => ({
+            id: String(session._id),
+            adventureId: session.adventureId,
+            characterId: session.characterId,
+            currentSceneId: session.currentSceneId,
+            status: session.status,
+            updatedAt: session.updatedAt
+        })));
+    } catch (error) {
+        res.status(500).json({ error: 'No se pudieron cargar las partidas.' });
+    }
+});
+
+app.get('/api/adventure-sessions/:id', authenticateToken, async (req, res) => {
+    try {
+        const session = await findAdventureSession(req.params.id, req.user.id);
+        if (!session) return res.status(404).json({ error: 'Partida no encontrada.' });
+        const adventure = loadAdventureOrThrow(session.adventureId);
+        const character = await resolveAdventureCharacter(session.characterId, req.user);
+        res.json(serializeAdventureSession(session, adventure, character));
+    } catch (error) {
+        res.status(error.status || 400).json({ error: error.message || 'No se pudo cargar la partida.' });
+    }
+});
+
+app.post('/api/adventure-sessions/:id/choices', authenticateToken, async (req, res) => {
+    try {
+        const session = await findAdventureSession(req.params.id, req.user.id);
+        if (!session) return res.status(404).json({ error: 'Partida no encontrada.' });
+        const adventure = loadAdventureOrThrow(session.adventureId);
+        const engine = new AdventureEngine(adventure);
+        const result = engine.chooseChoice(session.toObject(), req.body?.choiceId);
+        assignAdventureSession(session, result.session);
+        await session.save();
+        const character = await resolveAdventureCharacter(session.characterId, req.user);
+        res.json({ status: result.status, session: serializeAdventureSession(session, adventure, character) });
+    } catch (error) {
+        res.status(error.status || 400).json({ error: error.message || 'No se pudo resolver la decisión.' });
+    }
+});
+
+app.post('/api/adventure-sessions/:id/roll', authenticateToken, async (req, res) => {
+    try {
+        const session = await findAdventureSession(req.params.id, req.user.id);
+        if (!session) return res.status(404).json({ error: 'Partida no encontrada.' });
+        const adventure = loadAdventureOrThrow(session.adventureId);
+        const character = await resolveAdventureCharacter(session.characterId, req.user);
+        if (!session.pendingRoll) return res.status(400).json({ error: 'La partida no tiene ninguna tirada pendiente.' });
+
+        const roll = resolveSkillRoll({
+            ficha: character.ficha,
+            sourceKey: session.pendingRoll.skill,
+            modifiers: { hopeSpent: false }
+        });
+        if (!roll) return res.status(400).json({ error: 'La habilidad de la tirada no existe en el personaje.' });
+
+        const engine = new AdventureEngine(adventure);
+        const result = engine.resolvePendingRoll(session.toObject(), roll);
+        assignAdventureSession(session, result.session);
+        await session.save();
+        res.json({
+            status: result.status,
+            roll: {
+                skill: roll.sourceKey,
+                targetNumber: roll.targetNumber,
+                d12Results: roll.d12Results,
+                d6Results: roll.d6Results,
+                total: roll.total,
+                outcome: roll.outcome,
+                success: roll.success
+            },
+            session: serializeAdventureSession(session, adventure, character)
+        });
+    } catch (error) {
+        console.error('Error al resolver tirada de aventura:', error);
+        res.status(error.status || 400).json({ error: error.message || 'No se pudo resolver la tirada.' });
+    }
+});
+
 // Enviar lista de salas a todos
 async function emitRoomList() {
     try {
@@ -520,15 +803,9 @@ io.on('connection', (socket) => {
                     adventurerName = adventurer.nombre;
                     const ficha = adventurer.ficha || {};
                     if (context.type === 'skill') {
-                        const skillAttributes = { fuerza: ['impresionar', 'atletismo', 'alerta', 'cazar', 'cantar', 'oficio'], corazon: ['alentar', 'viajar', 'perspicacia', 'curar', 'cortesia', 'guerrear'], mente: ['persuadir', 'sigilo', 'inspeccionar', 'explorar', 'acertijos', 'saber'] };
-                        const attributeKey = Object.entries(skillAttributes).find(([, skills]) => skills.includes(context.sourceKey))?.[0];
-                        const skill = attributeKey && ficha.habilidades?.[attributeKey]?.[context.sourceKey];
-                        const attribute = attributeKey && ficha.atributos?.[attributeKey];
-                        if (!skill || !attribute) return socket.emit('roll-error', 'La habilidad no existe en la ficha seleccionada.');
-                        const expectedD6 = Math.max(0, Math.min(6, Math.trunc(Number(skill.rango) || 0)));
-                        const expectedMode = context.illFavoured ? 'worst' : (skill.favorecida ? 'best' : 'normal');
-                        const expectedTarget = Number.isFinite(Number(attribute.tn)) ? Number(attribute.tn) : (ficha.trancos ? 18 : 20) - (Number(attribute.valor) || 0);
-                        if (d6Count !== expectedD6 || featDiceMode !== expectedMode || targetNumber !== expectedTarget) return socket.emit('roll-error', 'La preparación de la habilidad ya no coincide con la ficha guardada.');
+                        const profile = getSkillRollProfile(ficha, context.sourceKey, { illFavoured: context.illFavoured });
+                        if (!profile) return socket.emit('roll-error', 'La habilidad no existe en la ficha seleccionada.');
+                        if (d6Count !== profile.successDice || featDiceMode !== profile.featDiceMode || targetNumber !== profile.targetNumber) return socket.emit('roll-error', 'La preparación de la habilidad ya no coincide con la ficha guardada.');
                     } else {
                         const gearIndex = Number(context.gearIndex);
                         const gear = Number.isInteger(gearIndex) && gearIndex >= 0 ? ficha.combate?.equipoGuerra?.[gearIndex] : null;
@@ -554,14 +831,8 @@ io.on('connection', (socket) => {
             const senderName = socket.user.username; // Usa el usuario logueado
             const senderStance = currentUserObj.stance || 'Posición abierta';
 
-            const d12Results = Array.from({ length: d12Count }, () => Math.floor(Math.random() * 12) + 1);
-            const d6Results = Array.from({ length: d6Count }, () => Math.floor(Math.random() * 6) + 1);
-            const d12Value = featDiceMode === 'normal' || d12Results.length < 2
-                ? d12Results.reduce((a, b) => a + b, 0)
-                : d12Results.reduce((a, b) => featDiceMode === 'worst'
-                    ? (a === 11 || b === 12 ? a : (b === 11 || a === 12 ? b : Math.min(a, b)))
-                    : (a === 12 || b === 11 ? a : (b === 12 || a === 11 ? b : Math.max(a, b))));
-            const total = d12Value + d6Results.reduce((a, b) => a + b, 0) + modifier;
+            const resolvedRoll = rollDice({ d12Count, d6Count, modifier, featDiceMode });
+            const { d12Results, d6Results, effectiveFeatDie: d12Value, total } = resolvedRoll;
             if (targetNumber !== undefined) outcome = total >= targetNumber ? 'success' : 'failure';
 
             const rollEntry = {

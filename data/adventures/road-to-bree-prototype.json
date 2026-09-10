@@ -1,0 +1,49 @@
+{
+  "id": "road-to-bree-prototype",
+  "title": "El camino a Bree · Prototipo",
+  "description": "Una prueba breve del motor de aventuras de TORDice.",
+  "duration": "5 minutos",
+  "difficulty": "Prueba",
+  "startSceneId": "road",
+  "scenes": [
+    {
+      "id": "road",
+      "title": "El Camino Verde",
+      "text": "La lluvia golpea tu capucha mientras avanzas hacia Bree. Una carreta abandonada bloquea parcialmente el camino y, alrededor de ella, el barro conserva marcas recientes.",
+      "choices": [
+        {
+          "id": "search-tracks",
+          "text": "Buscar huellas alrededor de la carreta",
+          "skillCheck": {
+            "skill": "explorar",
+            "successSceneId": "tracks-found",
+            "failureSceneId": "tracks-missed"
+          }
+        },
+        {
+          "id": "continue-road",
+          "text": "Continuar hacia Bree sin detenerte",
+          "nextSceneId": "tracks-missed"
+        }
+      ]
+    },
+    {
+      "id": "tracks-found",
+      "title": "Huellas en el barro",
+      "text": "Encuentras varias pisadas alrededor de la carreta. No pertenecen a hombres: son demasiado anchas y se dirigen hacia el bosque.",
+      "onEnter": [
+        { "type": "SET_FLAG", "key": "discoveredOrcTracks", "value": true }
+      ],
+      "choices": []
+    },
+    {
+      "id": "tracks-missed",
+      "title": "La lluvia borra el rastro",
+      "text": "El agua ha convertido el camino en barro y no consigues distinguir un rastro fiable. Desde el bosque llega un ruido que te anima a no demorarte.",
+      "onEnter": [
+        { "type": "SET_FLAG", "key": "discoveredOrcTracks", "value": false }
+      ],
+      "choices": []
+    }
+  ]
+}
