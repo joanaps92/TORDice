@@ -119,6 +119,7 @@ class AdventureEngine {
             session.pendingRoll = {
                 choiceId: choice.id,
                 skill: choice.skillCheck.skill,
+                difficulty: Number.isInteger(choice.skillCheck.difficulty) ? choice.skillCheck.difficulty : null,
                 label: choice.text,
                 createdAt: this.clock()
             };

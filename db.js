@@ -75,10 +75,41 @@ const adventureSessionSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
+// Las aventuras se mantienen separadas del código del motor.  Adventure guarda
+// el puntero editorial y AdventureVersion conserva tanto el JSON original como
+// la representación normalizada que consume el motor.
+const adventureSchema = new mongoose.Schema({
+  adventureId: { type: String, required: true, unique: true, index: true },
+  title: { type: String, required: true },
+  description: { type: String, default: '' },
+  ambientacion: { type: String, default: '' },
+  duration: { type: String, default: '' },
+  difficulty: { type: String, default: '' },
+  status: { type: String, enum: ['draft', 'published'], default: 'draft', index: true },
+  currentVersion: { type: Number, required: true, default: 1 },
+  publishedVersion: { type: Number, default: null },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const adventureVersionSchema = new mongoose.Schema({
+  adventureId: { type: String, required: true, index: true },
+  version: { type: Number, required: true },
+  schemaVersion: { type: Number, required: true },
+  originalJson: { type: mongoose.Schema.Types.Mixed, required: true },
+  normalizedJson: { type: mongoose.Schema.Types.Mixed, required: true },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  createdAt: { type: Date, default: Date.now }
+}, { timestamps: false });
+adventureVersionSchema.index({ adventureId: 1, version: 1 }, { unique: true });
+
 const Roll = mongoose.model('Roll', rollSchema);
 const Room = mongoose.model('Room', roomSchema);
 const Adventurer = mongoose.model('Adventurer', adventurerSchema);
 const AdventureSession = mongoose.model('AdventureSession', adventureSessionSchema);
+const Adventure = mongoose.model('Adventure', adventureSchema);
+const AdventureVersion = mongoose.model('AdventureVersion', adventureVersionSchema);
 const User = mongoose.model('User', userSchema);
 
 async function connectDB() {
@@ -86,4 +117,4 @@ async function connectDB() {
   console.log('Conectado a MongoDB');
 }
 
-module.exports = { connectDB, Roll, Room, Adventurer, AdventureSession, User };
+module.exports = { connectDB, Roll, Room, Adventurer, AdventureSession, Adventure, AdventureVersion, User };

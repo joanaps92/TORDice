@@ -293,9 +293,144 @@ document.addEventListener('DOMContentLoaded', () => {
     async function refreshAdminPanel() {
         await loadUsers();
         await loadAdventurerVisibility();
+        await loadAdventureAdministration();
+    }
+
+    const adventureEditor = document.getElementById('adminAdventureEditorModal');
+    const adventureEditorModal = adventureEditor ? bootstrap.Modal.getOrCreateInstance(adventureEditor) : null;
+    const adventureJsonInput = document.getElementById('admin-adventure-json');
+    const adventureValidation = document.getElementById('admin-adventure-validation');
+    const adventureSaveButton = document.getElementById('admin-adventure-save-btn');
+    const adventureMetadataFields = {
+        titulo: document.getElementById('admin-adventure-title'),
+        descripcion: document.getElementById('admin-adventure-description'),
+        ambientacion: document.getElementById('admin-adventure-setting'),
+        duracion: document.getElementById('admin-adventure-duration'),
+        dificultad: document.getElementById('admin-adventure-difficulty')
+    };
+    let adventureValidationPassed = false;
+
+    function adventureApi(path, options = {}) {
+        return fetch(path, { ...options, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}`, ...(options.headers || {}) } });
+    }
+
+    function renderAdventureValidation(result) {
+        adventureValidation.classList.remove('d-none', 'is-invalid');
+        adventureSaveButton.disabled = !result.valid;
+        adventureValidationPassed = result.valid;
+        if (result.valid) {
+            adventureValidation.innerHTML = `<strong><i class="fa-solid fa-circle-check me-1"></i> JSON válido</strong><div>${result.stats.scenes} escenas · ${result.stats.rolls} tiradas · ${result.stats.terminals} finales · Todas las escenas son accesibles</div>`;
+            return;
+        }
+        adventureValidation.classList.add('is-invalid');
+        adventureValidation.innerHTML = `<strong><i class="fa-solid fa-circle-exclamation me-1"></i> Hay ${result.errors?.length || 1} errores</strong><ul>${(result.errors || [{ message: 'El JSON no es válido.' }]).map(error => `<li>${escapeHtml(error.message)}${error.path ? ` <small>(${escapeHtml(error.path)})</small>` : ''}</li>`).join('')}</ul>`;
+    }
+
+    function syncAdventureMetadataFields(json) {
+        Object.entries(adventureMetadataFields).forEach(([field, input]) => { input.value = json?.[field] || ''; });
+    }
+
+    function adventureEditorJson() {
+        const json = JSON.parse(adventureJsonInput.value);
+        Object.entries(adventureMetadataFields).forEach(([field, input]) => { if (input.value.trim()) json[field] = input.value.trim(); });
+        return json;
+    }
+
+    async function loadAdventureAdministration() {
+        const tbody = document.getElementById('admin-adventures-list');
+        if (!tbody) return;
+        const res = await adventureApi('/api/admin/adventures');
+        if (!res.ok) { tbody.innerHTML = '<tr><td colspan="5" class="text-danger">No se pudieron cargar las aventuras.</td></tr>'; return; }
+        const adventures = await res.json();
+        if (!adventures.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-muted">Todavía no hay aventuras gestionadas.</td></tr>'; return; }
+        tbody.innerHTML = adventures.map(adventure => {
+            const published = adventure.status === 'published';
+            const date = adventure.updatedAt ? new Date(adventure.updatedAt).toLocaleDateString('es-ES') : '—';
+            return `<tr data-adventure-id="${escapeHtml(adventure.id)}"><td><strong>${escapeHtml(adventure.title)}</strong><small class="d-block text-muted">${escapeHtml(adventure.id)}</small></td><td><span class="badge ${published ? 'bg-success' : 'bg-secondary'}">${published ? 'Publicada' : 'Borrador'}</span></td><td>v${escapeHtml(adventure.version)}</td><td>${escapeHtml(date)}</td><td class="text-nowrap"><button class="btn btn-sm btn-outline-dark admin-adventure-preview" title="Previsualizar y jugar"><i class="fa-solid fa-play"></i></button> <button class="btn btn-sm btn-outline-primary admin-adventure-edit" title="Ver o editar JSON"><i class="fa-solid fa-pen"></i></button> <button class="btn btn-sm btn-outline-secondary admin-adventure-download" title="Descargar JSON"><i class="fa-solid fa-download"></i></button> <button class="btn btn-sm ${published ? 'btn-outline-warning admin-adventure-unpublish' : 'btn-outline-success admin-adventure-publish'}">${published ? 'Despublicar' : 'Publicar'}</button> <button class="btn btn-sm btn-outline-danger admin-adventure-delete" title="Eliminar"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+        }).join('');
+    }
+
+    function openNewAdventureEditor() {
+        adventureJsonInput.value = '';
+        document.getElementById('admin-adventure-editor-title').textContent = 'NUEVA AVENTURA';
+        adventureValidation.classList.add('d-none');
+        adventureSaveButton.disabled = true;
+        adventureValidationPassed = false;
+        adventureEditor.dataset.adventureId = '';
+        adventureEditorModal.show();
+        adventureApi('/api/admin/adventures/template').then(res => res.json()).then(template => { if (!adventureJsonInput.value) adventureJsonInput.value = JSON.stringify(template, null, 2); syncAdventureMetadataFields(template); });
+    }
+
+    async function editAdventure(id) {
+        const res = await adventureApi(`/api/admin/adventures/${encodeURIComponent(id)}`);
+        const data = await res.json();
+        if (!res.ok) return appAlert(data.error || 'No se pudo cargar la aventura.');
+        adventureJsonInput.value = JSON.stringify(data.json, null, 2);
+        syncAdventureMetadataFields(data.json);
+        document.getElementById('admin-adventure-editor-title').textContent = `EDITAR ${String(data.adventure.title || '').toUpperCase()}`;
+        adventureValidation.classList.add('d-none');
+        adventureSaveButton.disabled = true;
+        adventureValidationPassed = false;
+        adventureEditor.dataset.adventureId = id;
+        adventureEditorModal.show();
+    }
+
+    async function previewAdventure(id) {
+        const characters = await adventureApi('/api/adventure-characters');
+        const availableCharacters = characters.ok ? await characters.json() : [];
+        const character = availableCharacters[0];
+        if (!character) return appAlert('Necesitas al menos un personaje para iniciar la preview.');
+        bootstrap.Modal.getInstance(document.getElementById('adminModal'))?.hide();
+        if (window.startAdventurePreview) window.startAdventurePreview(id, character.id);
     }
 
     document.getElementById('adminModal').addEventListener('show.bs.modal', refreshAdminPanel);
+    document.getElementById('admin-new-adventure-btn').addEventListener('click', openNewAdventureEditor);
+    document.getElementById('admin-adventures-template-btn').addEventListener('click', async () => {
+        const res = await adventureApi('/api/admin/adventures/template');
+        const blob = new Blob([JSON.stringify(await res.json(), null, 2)], { type: 'application/json' });
+        const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'aventura-template-v1.json'; link.click(); URL.revokeObjectURL(link.href);
+    });
+    document.getElementById('admin-adventure-file').addEventListener('change', event => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => { adventureJsonInput.value = reader.result; try { syncAdventureMetadataFields(JSON.parse(reader.result)); } catch (_) {} adventureValidation.classList.add('d-none'); adventureSaveButton.disabled = true; adventureValidationPassed = false; };
+        reader.readAsText(file);
+    });
+    adventureJsonInput.addEventListener('input', () => { try { syncAdventureMetadataFields(JSON.parse(adventureJsonInput.value)); } catch (_) {} adventureValidation.classList.add('d-none'); adventureSaveButton.disabled = true; adventureValidationPassed = false; });
+    document.getElementById('admin-adventure-validate-btn').addEventListener('click', async () => {
+        let json;
+        try { json = adventureEditorJson(); } catch (_) { return renderAdventureValidation({ valid: false, errors: [{ message: 'El JSON no es válido.' }] }); }
+        const res = await adventureApi('/api/admin/adventures/validate', { method: 'POST', body: JSON.stringify({ json }) });
+        renderAdventureValidation(await res.json());
+    });
+    document.getElementById('admin-adventure-save-btn').addEventListener('click', async () => {
+        if (!adventureValidationPassed) return;
+        const res = await adventureApi('/api/admin/adventures', { method: 'POST', body: JSON.stringify({ json: adventureEditorJson() }) });
+        const data = await res.json();
+        if (!res.ok) return renderAdventureValidation(data);
+        adventureEditorModal.hide();
+        await loadAdventureAdministration();
+        appAlert(`Aventura guardada como borrador (v${data.version}).`, 'Aventura guardada');
+    });
+    document.getElementById('admin-adventures-list').addEventListener('click', async event => {
+        const row = event.target.closest('tr[data-adventure-id]');
+        if (!row) return;
+        const id = row.dataset.adventureId;
+        if (event.target.closest('.admin-adventure-preview')) return previewAdventure(id);
+        if (event.target.closest('.admin-adventure-edit')) return editAdventure(id);
+        if (event.target.closest('.admin-adventure-download')) {
+            const download = await adventureApi(`/api/admin/adventures/${encodeURIComponent(id)}/json`);
+            if (!download.ok) return appAlert('No se pudo descargar la aventura.');
+            const blob = await download.blob();
+            const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${id}.json`; link.click(); URL.revokeObjectURL(link.href);
+            return;
+        }
+        const action = event.target.closest('.admin-adventure-publish, .admin-adventure-unpublish');
+        if (action) { await adventureApi(`/api/admin/adventures/${encodeURIComponent(id)}/${action.classList.contains('admin-adventure-publish') ? 'publish' : 'unpublish'}`, { method: 'POST' }); await loadAdventureAdministration(); return; }
+        if (event.target.closest('.admin-adventure-delete') && await appConfirm('Esta acción eliminará todas las versiones guardadas. ¿Continuar?', 'Eliminar aventura')) { await adventureApi(`/api/admin/adventures/${encodeURIComponent(id)}`, { method: 'DELETE' }); await loadAdventureAdministration(); }
+    });
 
     document.getElementById('admin-adventurers-list').addEventListener('change', (event) => {
         const row = event.target.closest('tr[data-adventurer-id]');

@@ -99,6 +99,7 @@ let adventureCharacters = [];
 let adventureSessions = [];
 let selectedAdventureId = '';
 let currentAdventureSession = null;
+let currentAdventurePreview = false;
 
 // Persistence helpers for last session
 const LAST_USER_KEY = 'rpg_last_username';
@@ -1620,7 +1621,9 @@ function renderAdventureSession(session, roll = null) {
     adventureSessionTitle.textContent = session.adventure?.title || adventureTitleForSession(session);
     adventureSessionCharacter.textContent = session.character?.nombre ? `Interpretando a ${session.character.nombre}` : '';
     adventureSessionCharacterBtn.classList.toggle('d-none', !session.character);
-    adventureSessionStatus.textContent = session.status === 'completed' ? 'CRÓNICA COMPLETADA' : 'CRÓNICA ACTIVA';
+    adventureSessionStatus.textContent = currentAdventurePreview
+        ? 'PREVISUALIZACIÓN · NO PUBLICADA'
+        : (session.status === 'completed' ? 'CRÓNICA COMPLETADA' : 'CRÓNICA ACTIVA');
     adventureSceneTitle.textContent = session.scene?.title || 'Fin de la crónica';
     adventureSceneText.textContent = session.scene?.text || 'La historia ha llegado a su conclusión.';
     renderAdventureState(session);
@@ -1668,11 +1671,12 @@ async function chooseAdventureChoice(choiceId) {
     const buttons = [...adventureChoices.querySelectorAll('button')];
     buttons.forEach(button => { button.disabled = true; });
     try {
-        const data = await adventureRequest(`/api/adventure-sessions/${currentAdventureSession.id}/choices`, {
+        const sessionPath = currentAdventurePreview ? `/api/admin/adventure-preview-sessions/${currentAdventureSession.id}/choices` : `/api/adventure-sessions/${currentAdventureSession.id}/choices`;
+        const data = await adventureRequest(sessionPath, {
             method: 'POST', body: JSON.stringify({ choiceId })
         });
         renderAdventureSession(data.session);
-        await loadAdventureModeData(false);
+        if (!currentAdventurePreview) await loadAdventureModeData(false);
     } catch (error) {
         buttons.forEach(button => { button.disabled = false; });
         appAlert(error.message, 'Decisión no disponible');
@@ -1684,9 +1688,10 @@ async function resolveAdventureRoll() {
     adventureRollBtn.disabled = true;
     adventureRollBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Lanzando…';
     try {
-        const data = await adventureRequest(`/api/adventure-sessions/${currentAdventureSession.id}/roll`, { method: 'POST', body: '{}' });
+        const sessionPath = currentAdventurePreview ? `/api/admin/adventure-preview-sessions/${currentAdventureSession.id}/roll` : `/api/adventure-sessions/${currentAdventureSession.id}/roll`;
+        const data = await adventureRequest(sessionPath, { method: 'POST', body: '{}' });
         renderAdventureSession(data.session, data.roll);
-        await loadAdventureModeData(false);
+        if (!currentAdventurePreview) await loadAdventureModeData(false);
     } catch (error) {
         appAlert(error.message, 'No se pudo resolver la tirada');
     } finally {
@@ -1704,6 +1709,7 @@ async function startAdventure(adventureId = selectedAdventureId) {
     const startButton = adventureList.querySelector(`[data-adventure-id="${CSS.escape(adventureId)}"] .adventure-start-card-btn`);
     if (startButton) startButton.classList.add('fa-spin');
     try {
+        currentAdventurePreview = false;
         const session = await adventureRequest('/api/adventure-sessions', { method: 'POST', body: JSON.stringify({ adventureId, characterId }) });
         renderAdventureSession(session);
         await loadAdventureModeData(false);
@@ -1713,6 +1719,22 @@ async function startAdventure(adventureId = selectedAdventureId) {
         if (startButton) startButton.classList.remove('fa-spin');
     }
 }
+
+window.startAdventurePreview = async function(adventureId, characterId) {
+    try {
+        const session = await adventureRequest(`/api/admin/adventures/${encodeURIComponent(adventureId)}/preview-sessions`, { method: 'POST', body: JSON.stringify({ characterId }) });
+        currentAdventurePreview = true;
+        currentAdventureSession = session;
+        roomSelectionScreen.classList.add('d-none');
+        appScreen.classList.add('d-none');
+        adventurerScreen.classList.add('d-none');
+        adventureScreen.classList.remove('d-none');
+        adventureScreen.classList.add('d-block');
+        renderAdventureSession(session);
+    } catch (error) {
+        appAlert(error.message, 'No se pudo iniciar la preview');
+    }
+};
 
 async function loadAdventureModeData(resetSession = true) {
     if (isLocalFile) {
@@ -1749,6 +1771,7 @@ function openAdventureMode() {
 
 if (openAdventureModeBtn) openAdventureModeBtn.addEventListener('click', openAdventureMode);
 if (adventureBackBtn) adventureBackBtn.addEventListener('click', () => {
+    currentAdventurePreview = false;
     adventureScreen.classList.add('d-none');
     roomSelectionScreen.classList.remove('d-none');
     roomSelectionScreen.classList.add('d-flex');
@@ -1757,7 +1780,9 @@ if (adventureRefreshBtn) adventureRefreshBtn.addEventListener('click', () => loa
 if (adventureCharacterSheetBtn) adventureCharacterSheetBtn.addEventListener('click', () => showAdventureCharacterSheet(selectedAdventureCharacter()));
 if (adventureSessionCharacterBtn) adventureSessionCharacterBtn.addEventListener('click', () => showAdventureCharacterSheet(currentAdventureSession?.character));
 if (adventureRollBtn) adventureRollBtn.addEventListener('click', resolveAdventureRoll);
-if (adventureRestartBtn) adventureRestartBtn.addEventListener('click', () => startAdventure(currentAdventureSession?.adventure?.id || selectedAdventureId));
+if (adventureRestartBtn) adventureRestartBtn.addEventListener('click', () => currentAdventurePreview
+    ? window.startAdventurePreview(currentAdventureSession?.adventure?.id || selectedAdventureId, currentAdventureSession?.character?.id)
+    : startAdventure(currentAdventureSession?.adventure?.id || selectedAdventureId));
 if (adventureList) adventureList.addEventListener('dblclick', event => {
     const card = event.target.closest('[data-adventure-id]');
     if (card) startAdventure(card.dataset.adventureId);

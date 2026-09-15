@@ -1315,6 +1315,16 @@ h1, h2, h3, h4, h5, h6,
 .admin-visibility-table .admin-sheet-visibility { min-width: 175px; }
 .admin-visibility-table .admin-sheet-users { min-width: 190px; }
 .admin-visibility-table select[multiple] { padding: 4px; }
+.admin-adventures-table { min-width: 760px; }
+.admin-adventures-table th { color: var(--tor-red-dark); font: 700 .72rem 'Cinzel', serif; text-transform: uppercase; white-space: nowrap; }
+.admin-adventure-editor { min-height: 430px; resize: vertical; font: .86rem/1.45 Consolas, monospace; }
+.admin-adventure-metadata-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.admin-adventure-metadata-grid label { color: var(--tor-red-dark); font: 700 .68rem 'Cinzel', serif; text-transform: uppercase; }
+.admin-adventure-metadata-grid input { margin-top: 4px; font: .9rem 'Crimson Pro', Georgia, serif; }
+.admin-adventure-validation { padding: 11px 13px; border-radius: 5px; background: rgba(104,145,54,.12); color: #426124; font: .92rem 'Crimson Pro', Georgia, serif; }
+.admin-adventure-validation.is-invalid { background: rgba(188,44,26,.1); color: #8a3e30; }
+.admin-adventure-validation ul { margin: 6px 0 0; padding-left: 20px; }
+@media (max-width: 900px) { .admin-adventure-metadata-grid { grid-template-columns: 1fr 1fr; } }
 .roll-mode-switch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 4px; border: 1px solid var(--tor-red-border); border-radius: 6px; background: rgba(197,160,89,.1); }
 .roll-mode-btn { color: var(--tor-ink-muted); border: 0; font: 700 .7rem 'Cinzel', serif; text-transform: uppercase; }
 .roll-mode-btn:hover, .roll-mode-btn.active { color: #fff; background: var(--tor-red); }

@@ -6,9 +6,13 @@ require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
-const { connectDB, Roll, Room, Adventurer, AdventureSession, User } = require('./db');
+const { connectDB, Roll, Room, Adventurer, AdventureSession, Adventure, AdventureVersion, User } = require('./db');
 const { AdventureEngine } = require('./services/adventure-engine');
-const { getDefaultCharacter, listAdventures, loadAdventure } = require('./services/adventure-loader');
+const { getDefaultCharacter, loadAdventure } = require('./services/adventure-loader');
+const { templateAdventure } = require('./services/adventure-contract');
+const { importAdventure, parseAdventureJson } = require('./services/adventure-import-service');
+const { validateAdventureDocument } = require('./services/adventure-validator');
+const { summary: managedAdventureSummary, saveImportedAdventure, getAdventure: getManagedAdventure, listAdventures: listManagedAdventures, publishAdventure, unpublishAdventure, deleteAdventure, syncFileAdventures } = require('./services/adventure-repository');
 const { getSkillRollProfile, normalizeCombatKey, rollDice, resolveSkillRoll } = require('./services/dice-engine');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_for_tordice';
@@ -35,6 +39,7 @@ const PORT = process.env.PORT || 3000;
 
 // Estado en memoria para usuarios conectados
 const activeUsers = {};
+const previewSessions = new Map();
 
 // Middleware
 app.use(express.static('public'));
@@ -471,16 +476,216 @@ async function findAdventureSession(sessionId, userId) {
     return AdventureSession.findOne({ _id: sessionId, userId });
 }
 
+async function loadPublishedAdventureOrThrow(id) {
+    const managed = await getManagedAdventure(id, { publishedOnly: true });
+    if (managed?.adventure) {
+        if (managed.adventure.status !== 'published' || !managed.content) {
+            const error = new Error('La aventura no está publicada.');
+            error.status = 404;
+            throw error;
+        }
+        return managed.content.normalizedJson;
+    }
+    return loadAdventureOrThrow(id);
+}
+
+async function loadCurrentAdventureOrThrow(id) {
+    const managed = await getManagedAdventure(id, { current: true });
+    if (managed?.adventure) {
+        if (!managed.content) {
+            const error = new Error('La aventura no tiene una versión disponible.');
+            error.status = 404;
+            throw error;
+        }
+        return managed.content.normalizedJson;
+    }
+    return loadAdventureOrThrow(id);
+}
+
+function validationErrorResponse(error) {
+    return error.validation || { valid: false, errors: [{ code: error.code || 'IMPORT_ERROR', message: error.message, path: '$' }], warnings: [], stats: { scenes: 0, rolls: 0, terminals: 0, reachable: 0 } };
+}
+
+// --- ADVENTURE ADMINISTRATION ---
+
+app.get('/api/admin/adventures/template', authenticateToken, isAdmin, (_req, res) => {
+    res.json(templateAdventure());
+});
+
+app.post('/api/admin/adventures/validate', authenticateToken, isAdmin, (req, res) => {
+    try {
+        const rawValue = req.body?.json ?? req.body?.adventure ?? req.body;
+        const value = typeof rawValue === 'string' ? parseAdventureJson(rawValue) : rawValue;
+        const result = validateAdventureDocument(value);
+        res.status(result.valid ? 200 : 422).json(result);
+    } catch (error) {
+        res.status(422).json(validationErrorResponse(error));
+    }
+});
+
+app.get('/api/admin/adventures', authenticateToken, isAdmin, async (_req, res) => {
+    try {
+        const adventures = await listManagedAdventures();
+        res.json(adventures.map(managedAdventureSummary));
+    } catch (error) {
+        console.error('Error al listar aventuras administrables:', error);
+        res.status(500).json({ error: 'No se pudieron cargar las aventuras.' });
+    }
+});
+
+app.get('/api/admin/adventures/:id', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const managed = await getManagedAdventure(req.params.id, { current: true });
+        if (!managed?.adventure || !managed.content) return res.status(404).json({ error: 'Aventura no encontrada.' });
+        res.json({ adventure: managedAdventureSummary(managed.adventure), version: managed.version, json: managed.content.originalJson, normalized: managed.content.normalizedJson });
+    } catch (error) {
+        res.status(error.status || 500).json({ error: error.message || 'No se pudo cargar la aventura.' });
+    }
+});
+
+app.get('/api/admin/adventures/:id/json', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const managed = await getManagedAdventure(req.params.id, { current: true });
+        if (!managed?.content) return res.status(404).json({ error: 'Aventura no encontrada.' });
+        res.set('Content-Disposition', `attachment; filename="${req.params.id}-v${managed.version}.json"`);
+        res.type('application/json').send(JSON.stringify(managed.content.originalJson, null, 2));
+    } catch (error) {
+        res.status(error.status || 500).json({ error: error.message || 'No se pudo descargar la aventura.' });
+    }
+});
+
+app.put('/api/admin/adventures/:id', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const adventure = await Adventure.findOne({ adventureId: req.params.id });
+        if (!adventure) return res.status(404).json({ error: 'Aventura no encontrada.' });
+        const metadata = req.body || {};
+        for (const [field, target] of [['titulo', 'title'], ['descripcion', 'description'], ['ambientacion', 'ambientacion'], ['duracion', 'duration'], ['dificultad', 'difficulty']]) {
+            if (metadata[field] !== undefined) {
+                if (typeof metadata[field] !== 'string' || !metadata[field].trim()) return res.status(400).json({ error: `El campo ${field} no puede estar vacío.` });
+                adventure[target] = metadata[field].trim();
+            }
+        }
+        const currentVersion = await AdventureVersion.findOne({ adventureId: adventure.adventureId, version: adventure.currentVersion });
+        if (currentVersion) {
+            const json = { ...currentVersion.originalJson };
+            const normalized = { ...currentVersion.normalizedJson };
+            for (const [field, target] of [['titulo', 'title'], ['descripcion', 'description'], ['duracion', 'duration'], ['dificultad', 'difficulty']]) {
+                if (metadata[field] !== undefined) { json[field] = metadata[field].trim(); normalized[target] = metadata[field].trim(); }
+            }
+            if (metadata.ambientacion !== undefined) json.ambientacion = metadata.ambientacion.trim();
+            currentVersion.originalJson = json;
+            currentVersion.normalizedJson = normalized;
+            await currentVersion.save();
+        }
+        adventure.updatedAt = new Date();
+        await adventure.save();
+        res.json(managedAdventureSummary(adventure.toObject()));
+    } catch (error) { res.status(400).json({ error: error.message || 'No se pudieron editar los metadatos.' }); }
+});
+
+app.post('/api/admin/adventures', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const value = req.body?.json ?? req.body?.adventure ?? req.body;
+        const saved = await saveImportedAdventure(value, req.user.id);
+        res.status(201).json({ ...managedAdventureSummary(saved.adventure.toObject ? saved.adventure.toObject() : saved.adventure), version: saved.version, validation: saved.validation });
+    } catch (error) {
+        const validation = validationErrorResponse(error);
+        if (error.code === 'ADVENTURE_VALIDATION' || error.code === 'INVALID_JSON') return res.status(422).json(validation);
+        console.error('Error al guardar aventura:', error);
+        res.status(400).json({ error: error.message || 'No se pudo guardar la aventura.' });
+    }
+});
+
+app.post('/api/admin/adventures/:id/publish', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const adventure = await publishAdventure(req.params.id, req.user.id);
+        if (!adventure) return res.status(404).json({ error: 'Aventura no encontrada.' });
+        res.json(managedAdventureSummary(adventure.toObject ? adventure.toObject() : adventure));
+    } catch (error) { res.status(400).json({ error: error.message || 'No se pudo publicar la aventura.' }); }
+});
+
+app.post('/api/admin/adventures/:id/unpublish', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const adventure = await unpublishAdventure(req.params.id);
+        if (!adventure) return res.status(404).json({ error: 'Aventura no encontrada.' });
+        res.json(managedAdventureSummary(adventure.toObject ? adventure.toObject() : adventure));
+    } catch (error) { res.status(400).json({ error: error.message || 'No se pudo despublicar la aventura.' }); }
+});
+
+app.delete('/api/admin/adventures/:id', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const adventure = await deleteAdventure(req.params.id);
+        if (!adventure) return res.status(404).json({ error: 'Aventura no encontrada.' });
+        res.json({ success: true });
+    } catch (error) { res.status(400).json({ error: error.message || 'No se pudo eliminar la aventura.' }); }
+});
+
+function getPreviewSessionOrThrow(sessionId, userId) {
+    const preview = previewSessions.get(String(sessionId));
+    if (!preview || String(preview.userId) !== String(userId)) {
+        const error = new Error('Preview no encontrada o caducada.');
+        error.status = 404;
+        throw error;
+    }
+    preview.updatedAt = Date.now();
+    return preview;
+}
+
+app.post('/api/admin/adventures/:id/preview-sessions', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const adventure = await loadCurrentAdventureOrThrow(req.params.id);
+        const character = await resolveAdventureCharacter(req.body?.characterId, req.user);
+        const engine = new AdventureEngine(adventure);
+        const state = engine.createSession({ characterId: character.id, character });
+        const id = `preview-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        previewSessions.set(id, { id, userId: req.user.id, adventure, characterId: character.id, state, updatedAt: Date.now() });
+        const timeout = setTimeout(() => previewSessions.delete(id), 30 * 60 * 1000);
+        timeout.unref?.();
+        res.status(201).json(serializeAdventureSession({ ...state, id }, adventure, character));
+    } catch (error) { res.status(error.status || 400).json({ error: error.message || 'No se pudo iniciar la preview.' }); }
+});
+
+app.post('/api/admin/adventure-preview-sessions/:id/choices', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const preview = getPreviewSessionOrThrow(req.params.id, req.user.id);
+        const engine = new AdventureEngine(preview.adventure);
+        const result = engine.chooseChoice(preview.state, req.body?.choiceId);
+        preview.state = result.session;
+        const character = await resolveAdventureCharacter(preview.characterId, req.user);
+        res.json({ status: result.status, session: serializeAdventureSession({ ...preview.state, id: preview.id }, preview.adventure, character) });
+    } catch (error) { res.status(error.status || 400).json({ error: error.message || 'No se pudo resolver la decisión de preview.' }); }
+});
+
+app.post('/api/admin/adventure-preview-sessions/:id/roll', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const preview = getPreviewSessionOrThrow(req.params.id, req.user.id);
+        if (!preview.state.pendingRoll) return res.status(400).json({ error: 'La preview no tiene ninguna tirada pendiente.' });
+        const character = await resolveAdventureCharacter(preview.characterId, req.user);
+        const roll = resolveSkillRoll({ ficha: character.ficha, sourceKey: preview.state.pendingRoll.skill, modifiers: { hopeSpent: false } });
+        if (!roll) return res.status(400).json({ error: 'La habilidad de la tirada no existe en el personaje.' });
+        if (Number.isInteger(preview.state.pendingRoll.difficulty)) {
+            roll.targetNumber = preview.state.pendingRoll.difficulty;
+            roll.success = roll.total >= roll.targetNumber;
+            roll.failure = !roll.success;
+            roll.outcome = roll.success ? 'success' : 'failure';
+        }
+        const engine = new AdventureEngine(preview.adventure);
+        const result = engine.resolvePendingRoll(preview.state, roll);
+        preview.state = result.session;
+        res.json({ status: result.status, roll: { skill: roll.sourceKey, targetNumber: roll.targetNumber, d12Results: roll.d12Results, d6Results: roll.d6Results, total: roll.total, outcome: roll.outcome, success: roll.success }, session: serializeAdventureSession({ ...preview.state, id: preview.id }, preview.adventure, character) });
+    } catch (error) { res.status(error.status || 400).json({ error: error.message || 'No se pudo resolver la tirada de preview.' }); }
+});
+
 app.get('/api/adventures', authenticateToken, async (req, res) => {
     try {
-        const adventures = listAdventures();
+        const adventures = await listManagedAdventures({ publishedOnly: true });
         const sessions = await AdventureSession.find({ userId: req.user.id, status: { $ne: 'abandoned' } })
             .select('_id adventureId characterId status updatedAt')
             .sort({ updatedAt: -1 })
             .lean();
         res.json(adventures.map(adventure => ({
-            ...adventure,
-            activeSessions: sessions.filter(session => session.adventureId === adventure.id)
+            ...managedAdventureSummary(adventure),
+            activeSessions: sessions.filter(session => session.adventureId === adventure.adventureId)
         })));
     } catch (error) {
         console.error('Error al listar aventuras:', error);
@@ -490,7 +695,7 @@ app.get('/api/adventures', authenticateToken, async (req, res) => {
 
 app.get('/api/adventures/:id', authenticateToken, async (req, res) => {
     try {
-        res.json(adventureSummary(loadAdventureOrThrow(req.params.id)));
+        res.json(adventureSummary(await loadPublishedAdventureOrThrow(req.params.id)));
     } catch (error) {
         res.status(error.status || 500).json({ error: error.message || 'No se pudo cargar la aventura.' });
     }
@@ -533,7 +738,7 @@ app.get('/api/adventure-characters', authenticateToken, async (req, res) => {
 
 app.post('/api/adventure-sessions', authenticateToken, async (req, res) => {
     try {
-        const adventure = loadAdventureOrThrow(req.body?.adventureId);
+        const adventure = await loadPublishedAdventureOrThrow(req.body?.adventureId);
         const character = await resolveAdventureCharacter(req.body?.characterId, req.user);
         const existing = await AdventureSession.findOne({
             userId: req.user.id,
@@ -585,7 +790,7 @@ app.get('/api/adventure-sessions/:id', authenticateToken, async (req, res) => {
     try {
         const session = await findAdventureSession(req.params.id, req.user.id);
         if (!session) return res.status(404).json({ error: 'Partida no encontrada.' });
-        const adventure = loadAdventureOrThrow(session.adventureId);
+        const adventure = await loadPublishedAdventureOrThrow(session.adventureId);
         const character = await resolveAdventureCharacter(session.characterId, req.user);
         res.json(serializeAdventureSession(session, adventure, character));
     } catch (error) {
@@ -597,7 +802,7 @@ app.post('/api/adventure-sessions/:id/choices', authenticateToken, async (req, r
     try {
         const session = await findAdventureSession(req.params.id, req.user.id);
         if (!session) return res.status(404).json({ error: 'Partida no encontrada.' });
-        const adventure = loadAdventureOrThrow(session.adventureId);
+        const adventure = await loadPublishedAdventureOrThrow(session.adventureId);
         const engine = new AdventureEngine(adventure);
         const result = engine.chooseChoice(session.toObject(), req.body?.choiceId);
         assignAdventureSession(session, result.session);
@@ -613,7 +818,7 @@ app.post('/api/adventure-sessions/:id/roll', authenticateToken, async (req, res)
     try {
         const session = await findAdventureSession(req.params.id, req.user.id);
         if (!session) return res.status(404).json({ error: 'Partida no encontrada.' });
-        const adventure = loadAdventureOrThrow(session.adventureId);
+        const adventure = await loadPublishedAdventureOrThrow(session.adventureId);
         const character = await resolveAdventureCharacter(session.characterId, req.user);
         if (!session.pendingRoll) return res.status(400).json({ error: 'La partida no tiene ninguna tirada pendiente.' });
 
@@ -623,6 +828,15 @@ app.post('/api/adventure-sessions/:id/roll', authenticateToken, async (req, res)
             modifiers: { hopeSpent: false }
         });
         if (!roll) return res.status(400).json({ error: 'La habilidad de la tirada no existe en el personaje.' });
+
+        // Las aventuras pueden fijar una dificultad propia, independiente del
+        // NO calculado de la ficha del personaje.
+        if (Number.isInteger(session.pendingRoll.difficulty)) {
+            roll.targetNumber = session.pendingRoll.difficulty;
+            roll.success = roll.total >= roll.targetNumber;
+            roll.failure = !roll.success;
+            roll.outcome = roll.success ? 'success' : 'failure';
+        }
 
         const engine = new AdventureEngine(adventure);
         const result = engine.resolvePendingRoll(session.toObject(), roll);
@@ -907,6 +1121,8 @@ async function seedDatabase() {
 
 connectDB().then(async () => {
     await seedDatabase();
+    const admin = await User.findOne({ role: 'admin' }).select('_id').lean();
+    if (admin) await syncFileAdventures(admin._id);
     server.listen(PORT, () => {
         console.log(`Servidor corriendo en http://localhost:${PORT}`);
     });
