@@ -904,7 +904,7 @@ function renderAdventurerSelects() {
 async function fetchAdventurers() {
     if (isLocalFile) return renderAdventurerSelects();
     try { 
-        const token = localStorage.getItem('rpg_auth_token');
+        const token = window.TokenService.getToken();
         const response = await fetch('/api/adventurers', { headers: { 'Authorization': `Bearer ${token}` } }); 
         if (!response.ok) throw new Error(); 
         savedAdventurers = await response.json(); 
@@ -1116,7 +1116,7 @@ async function saveAdventurerToDatabase() {
     }
     const status = document.getElementById('adventurer-save-status'); if (status) status.textContent = 'Guardando ficha…';
     try {
-        const token = localStorage.getItem('rpg_auth_token');
+        const token = window.TokenService.getToken();
         const response = await fetch(adventurerId ? `/api/adventurers/${adventurerId}` : '/api/adventurers', { method: adventurerId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(adventurer) });
         if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.error || 'No se pudo guardar la ficha en la base de datos.'); } const stored = await response.json(); adventurerId = stored._id; saveAdventurer(); if (status) status.textContent = 'Ficha guardada en la base de datos.'; await fetchAdventurers(); if (sheetLibrarySelect) sheetLibrarySelect.value = adventurerId;
     } catch (error) { if (status) status.textContent = error.message; }
@@ -1406,7 +1406,7 @@ if (useSuggestionBtn) {
 // ==========================================
 
 function adventureAuthHeaders(json = false) {
-    const headers = { Authorization: `Bearer ${localStorage.getItem('rpg_auth_token') || ''}` };
+    const headers = { Authorization: `Bearer ${window.TokenService.getToken() || ''}` };
     if (json) headers['Content-Type'] = 'application/json';
     return headers;
 }

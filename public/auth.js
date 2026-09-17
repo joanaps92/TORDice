@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const authScreen = document.getElementById('auth-screen');
+    const registerScreen = document.getElementById('register-screen');
     const emailSetupScreen = document.getElementById('email-setup-screen');
     const forgotPasswordScreen = document.getElementById('forgot-password-screen');
     const roomSelectionScreen = document.getElementById('room-selection-screen');
@@ -8,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Forms
     const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
     const emailSetupForm = document.getElementById('email-setup-form');
     const forgotPasswordForm = document.getElementById('forgot-password-form');
     const resetPasswordForm = document.getElementById('reset-password-form');
@@ -17,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showScreen(screen) {
         authScreen.classList.add('d-none');
+        registerScreen.classList.add('d-none');
         emailSetupScreen.classList.add('d-none');
         forgotPasswordScreen.classList.add('d-none');
         roomSelectionScreen.classList.add('d-none');
@@ -27,70 +30,59 @@ document.addEventListener('DOMContentLoaded', () => {
         screen.classList.add('d-flex');
     }
 
-    function getToken() {
-        return localStorage.getItem('rpg_auth_token');
-    }
+    function getToken() { return window.TokenService.getToken(); }
 
-    function checkAuth() {
-        const token = getToken();
-        if (token) {
-            const userStr = localStorage.getItem('rpg_user');
-            if (userStr) {
-                const user = JSON.parse(userStr);
-                if (user.role === 'admin') {
-                    adminPanelBtn.classList.remove('d-none');
-                }
-                
-                // Set currentUser for client.js compatibility
-                window.currentUser = user.username;
-                const changeUsernameInput = document.getElementById('change-username-input');
-                if (changeUsernameInput) {
-                    changeUsernameInput.value = user.username;
-                    changeUsernameInput.disabled = true;
-                    const saveBtn = document.getElementById('save-username-btn');
-                    if (saveBtn) saveBtn.disabled = true;
-                }
-                
-                // Init socket
-                if (window.initSocket) window.initSocket(token);
-                
-                showScreen(roomSelectionScreen);
-                return;
+    async function checkAuth() {
+        adminPanelBtn.classList.add('d-none');
+        if (!getToken()) return showScreen(window.location.pathname === '/register' ? registerScreen : authScreen);
+        try {
+            const user = await window.AuthService.refreshCurrentUser();
+            if (user.role === 'admin') adminPanelBtn.classList.remove('d-none');
+            window.currentUser = user.displayName || user.username;
+            const changeUsernameInput = document.getElementById('change-username-input');
+            if (changeUsernameInput) {
+                changeUsernameInput.value = window.currentUser;
+                changeUsernameInput.disabled = true;
+                const saveBtn = document.getElementById('save-username-btn');
+                if (saveBtn) saveBtn.disabled = true;
             }
+            if (window.initSocket) window.initSocket(getToken());
+            showScreen(roomSelectionScreen);
+        } catch (_) {
+            showScreen(authScreen);
         }
-        showScreen(authScreen);
     }
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const username = document.getElementById('auth-username').value.trim();
+        const identity = document.getElementById('auth-email').value.trim();
         const password = document.getElementById('auth-password').value;
         
         try {
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            const data = await res.json();
-            
-            if (!res.ok) {
-                appAlert(data.error);
-                return;
-            }
-
-            localStorage.setItem('rpg_auth_token', data.token);
-            localStorage.setItem('rpg_user', JSON.stringify(data.user));
-
-            if (data.needsEmail) {
-                showScreen(emailSetupScreen);
-            } else {
-                checkAuth();
-            }
+            const data = await window.AuthService.login(identity.includes('@') ? { email: identity, password } : { username: identity, password });
+            if (data.needsEmail) showScreen(emailSetupScreen); else await checkAuth();
         } catch (err) {
-                appAlert("Error de conexión");
+            appAlert(err.message || 'Error de conexión');
         }
     });
+
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const displayName = document.getElementById('register-display-name').value.trim();
+        const email = document.getElementById('register-email').value.trim();
+        const password = document.getElementById('register-password').value;
+        const confirmation = document.getElementById('register-password-confirm').value;
+        if (password !== confirmation) return appAlert('Las contraseñas no coinciden.');
+        try {
+            await window.AuthService.register({ displayName, email, password });
+            await checkAuth();
+        } catch (err) {
+            appAlert(err.message || 'No se pudo crear la cuenta.');
+        }
+    });
+
+    document.getElementById('show-register').addEventListener('click', () => { history.pushState({}, '', '/register'); showScreen(registerScreen); });
+    document.getElementById('show-login').addEventListener('click', () => { history.pushState({}, '', '/login'); showScreen(authScreen); });
 
     emailSetupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -112,9 +104,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const user = JSON.parse(localStorage.getItem('rpg_user'));
+            const user = window.AuthService.getCurrentUser();
             user.email = email;
-            localStorage.setItem('rpg_user', JSON.stringify(user));
+            window.AuthService.setSession({ accessToken: getToken(), user });
             
             checkAuth();
         } catch (err) {
@@ -133,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     forgotPasswordForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const username = document.getElementById('forgot-username').value.trim();
+        const identity = document.getElementById('forgot-username').value.trim();
         const btn = forgotPasswordForm.querySelector('button[type="submit"]');
         btn.disabled = true;
         btn.textContent = 'Enviando...';
@@ -142,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch('/api/forgot-password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username })
+                body: JSON.stringify({ identity })
             });
             const data = await res.json();
             
@@ -164,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     resetPasswordForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const username = document.getElementById('forgot-username').value.trim();
+        const identity = document.getElementById('forgot-username').value.trim();
         const code = document.getElementById('reset-code').value.trim();
         const newPassword = document.getElementById('new-password').value;
 
@@ -172,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch('/api/reset-password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, code, newPassword })
+                body: JSON.stringify({ identity, code, newPassword })
             });
             const data = await res.json();
             
@@ -207,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
             users.forEach(u => {
                 tbody.innerHTML += `
                     <tr>
-                        <td>${escapeHtml(u.username)}</td>
+                        <td>${escapeHtml(u.displayName || u.username)}</td>
                         <td>${escapeHtml(u.role)}</td>
                         <td>
                             <button class="btn btn-sm btn-outline-primary edit-user-btn" data-id="${u._id}" data-username="${escapeHtml(u.username)}" data-role="${escapeHtml(u.role)}">Editar</button>
@@ -231,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderVisibilityUsers(select, selectedIds) {
         const selected = new Set((selectedIds || []).map(String));
         select.innerHTML = adminUsers.map(user => `
-            <option value="${user._id}" ${selected.has(String(user._id)) ? 'selected' : ''}>${escapeHtml(user.username)}${user.role === 'admin' ? ' (admin)' : ''}</option>
+            <option value="${user._id}" ${selected.has(String(user._id)) ? 'selected' : ''}>${escapeHtml(user.displayName || user.username)}${user.role === 'admin' ? ' (admin)' : ''}</option>
         `).join('');
     }
 
@@ -263,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const visibility = adventurer.visibility || 'private';
             const ownerId = adventurer.ownerId?._id || adventurer.ownerId || '';
             const ownerOptions = '<option value="">Sin propietario</option>' + adminUsers.map(user => `
-                <option value="${user._id}" ${String(ownerId) === String(user._id) ? 'selected' : ''}>${escapeHtml(user.username)}${user.role === 'admin' ? ' (admin)' : ''}</option>
+                <option value="${user._id}" ${String(ownerId) === String(user._id) ? 'selected' : ''}>${escapeHtml(user.displayName || user.username)}${user.role === 'admin' ? ' (admin)' : ''}</option>
             `).join('');
             return `
                 <tr data-adventurer-id="${adventurer._id}">
@@ -519,6 +511,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    function logout() {
+        window.AuthService.logout();
+        window.currentUser = '';
+        history.pushState({}, '', '/login');
+        showScreen(authScreen);
+    }
+    document.getElementById('logout-btn').addEventListener('click', logout);
+    document.getElementById('app-logout-btn').addEventListener('click', logout);
+
     // Start with the auth check in auth.js instead of loading roomSelectionScreen directly.
-    // Client.js normally did things on load, but we wait for checkAuth().
+    checkAuth();
 });

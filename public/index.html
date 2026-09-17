@@ -36,8 +36,8 @@
             </div>
             <form id="login-form">
                 <div class="mb-3">
-                    <label class="form-label tor-label"><i class="fa-solid fa-user me-1"></i> Usuario</label>
-                    <input type="text" class="form-control tor-input" id="auth-username" required>
+                    <label class="form-label tor-label"><i class="fa-solid fa-envelope me-1"></i> Email</label>
+                    <input type="text" class="form-control tor-input" id="auth-email" placeholder="usuario@email.com o usuario antiguo" required autocomplete="username">
                 </div>
                 <div class="mb-3">
                     <label class="form-label tor-label"><i class="fa-solid fa-key me-1"></i> Contraseña</label>
@@ -49,6 +49,26 @@
                 <button type="submit" class="btn btn-tor-primary w-100 py-2 mb-2">
                     <i class="fa-solid fa-right-to-bracket me-2"></i>ENTRAR
                 </button>
+                <button type="button" id="show-register" class="btn btn-link w-100 text-muted">Crear una cuenta</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="register-screen" class="container d-none align-items-center justify-content-center min-vh-100 py-4">
+        <div class="card border-0 shadow-lg p-4 p-md-5 login-card animate-fade-in tor-book-panel position-relative">
+            <div class="tor-corner-tl"></div><div class="tor-corner-tr"></div><div class="tor-corner-bl"></div><div class="tor-corner-br"></div>
+            <div class="text-center mb-4">
+                <div class="tor-mini-header mb-1">NUEVO VIAJERO</div>
+                <h1 class="logo-text mb-1">CREAR CUENTA</h1>
+                <div class="tor-header-divider"></div>
+            </div>
+            <form id="register-form">
+                <div class="mb-3"><label class="form-label tor-label" for="register-display-name">Nombre / alias</label><input class="form-control tor-input" id="register-display-name" required maxlength="80" autocomplete="name"></div>
+                <div class="mb-3"><label class="form-label tor-label" for="register-email">Email</label><input type="email" class="form-control tor-input" id="register-email" required autocomplete="email"></div>
+                <div class="mb-3"><label class="form-label tor-label" for="register-password">Contraseña</label><input type="password" class="form-control tor-input" id="register-password" required minlength="8" autocomplete="new-password"></div>
+                <div class="mb-4"><label class="form-label tor-label" for="register-password-confirm">Confirmar contraseña</label><input type="password" class="form-control tor-input" id="register-password-confirm" required minlength="8" autocomplete="new-password"></div>
+                <button type="submit" class="btn btn-tor-primary w-100 py-2 mb-2">REGISTRARME</button>
+                <button type="button" id="show-login" class="btn btn-link w-100 text-muted">Ya tengo una cuenta</button>
             </form>
         </div>
     </div>
@@ -88,7 +108,7 @@
                 <p class="small text-muted">Introduce tu usuario. Se enviará un código a tu correo registrado.</p>
                 <form id="forgot-password-form">
                     <div class="mb-3">
-                        <label class="form-label tor-label"><i class="fa-solid fa-user me-1"></i> Usuario</label>
+                        <label class="form-label tor-label"><i class="fa-solid fa-at me-1"></i> Email o usuario</label>
                         <input type="text" class="form-control tor-input" id="forgot-username" required>
                     </div>
                     <button type="submit" class="btn btn-tor-primary w-100 py-2 mb-2">ENVIAR CÓDIGO</button>
@@ -410,6 +430,7 @@
             <button id="open-adventure-mode-btn" class="btn btn-outline-dark w-100 py-2 mb-3" type="button">
                 <i class="fa-solid fa-book-open me-2"></i>MODO AVENTURAS
             </button>
+            <button id="logout-btn" class="btn btn-link text-muted w-100" type="button">Cerrar sesión</button>
 
             <!-- Room List Section -->
             <div id="room-list-container" class="mt-2 d-none">
@@ -450,6 +471,9 @@
                 </button>
                 <button id="leave-btn" class="btn btn-outline-danger btn-sm tor-leave-btn" title="Abandonar la sala">
                     <i class="fa-solid fa-right-from-bracket me-1"></i> Salir
+                </button>
+                <button id="app-logout-btn" class="btn btn-outline-secondary btn-sm" title="Cerrar sesión">
+                    <i class="fa-solid fa-arrow-right-from-bracket me-1"></i> Cuenta
                 </button>
             </div>
         </nav>
@@ -972,7 +996,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Socket.io client -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script src="auth.js?v=adventures-3"></script>
+    <script src="auth-service.js?v=auth-1"></script>
+    <script src="auth.js?v=auth-2"></script>
     <script src="client.js?v=adventures-3"></script>
 </body>
 </html>

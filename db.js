@@ -31,13 +31,20 @@ const roomSchema = new mongoose.Schema({
 });
 
 const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true, trim: true },
-  password: { type: String, required: true },
-  email: { type: String, trim: true, default: '' },
+  // username/password se conservan opcionales para leer usuarios creados por
+  // versiones anteriores. Los nuevos usuarios usan displayName/passwordHash.
+  username: { type: String, unique: true, sparse: true, trim: true },
+  password: { type: String },
+  email: { type: String, trim: true, lowercase: true },
+  passwordHash: { type: String, select: false },
+  displayName: { type: String, trim: true },
+  supabaseUserId: { type: String, index: true, sparse: true },
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
   resetPasswordCode: { type: String },
   resetPasswordExpires: { type: Date }
-});
+}, { timestamps: true });
+
+userSchema.index({ email: 1 }, { unique: true, sparse: true });
 
 // La ficha se mantiene flexible para poder conservar el JSON completo del aventurero.
 const adventurerSchema = new mongoose.Schema({
@@ -117,4 +124,19 @@ async function connectDB() {
   console.log('Conectado a MongoDB');
 }
 
-module.exports = { connectDB, Roll, Room, Adventurer, AdventureSession, Adventure, AdventureVersion, User };
+async function ensureUserIndexes() {
+  // Las cuentas antiguas podían guardar email vacío. Se elimina únicamente ese
+  // valor placeholder para que el índice único permita cuentas legacy sin email.
+  await User.createCollection().catch(error => {
+    if (error?.code !== 48 && error?.codeName !== 'NamespaceExists') throw error;
+  });
+  await User.updateMany({ email: '' }, { $unset: { email: 1 } });
+  const indexes = await User.collection.indexes();
+  const usernameIndex = indexes.find(index => index.key?.username === 1);
+  if (usernameIndex && !usernameIndex.sparse) {
+    await User.collection.dropIndex(usernameIndex.name);
+  }
+  await User.createIndexes();
+}
+
+module.exports = { connectDB, ensureUserIndexes, Roll, Room, Adventurer, AdventureSession, Adventure, AdventureVersion, User };
