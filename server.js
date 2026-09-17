@@ -1,12 +1,13 @@
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 require('dotenv').config();
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
-const { connectDB, Roll, Room, Adventurer, AdventureSession, Adventure, AdventureVersion, User } = require('./db');
+const { connectDB, ensureUserIndexes, Roll, Room, Adventurer, AdventureSession, Adventure, AdventureVersion, User } = require('./db');
+const { AuthService, normalizeEmail, isValidEmail, publicUser, MIN_PASSWORD_LENGTH } = require('./services/auth-service');
+const { authenticateUser, requireRole } = require('./middleware/auth');
 const { AdventureEngine } = require('./services/adventure-engine');
 const { getDefaultCharacter, loadAdventure } = require('./services/adventure-loader');
 const { templateAdventure } = require('./services/adventure-contract');
@@ -15,7 +16,7 @@ const { validateAdventureDocument } = require('./services/adventure-validator');
 const { summary: managedAdventureSummary, saveImportedAdventure, getAdventure: getManagedAdventure, listAdventures: listManagedAdventures, publishAdventure, unpublishAdventure, deleteAdventure, syncFileAdventures } = require('./services/adventure-repository');
 const { getSkillRollProfile, normalizeCombatKey, rollDice, resolveSkillRoll } = require('./services/dice-engine');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_for_tordice';
+const authService = new AuthService({ userModel: User });
 
 // Nodemailer config
 const transporter = nodemailer.createTransport({
@@ -44,26 +45,10 @@ const previewSessions = new Map();
 // Middleware
 app.use(express.static('public'));
 app.use(express.json());
+app.get(['/login', '/register'], (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-// Auth Middleware
-const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Acceso denegado' });
-
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) return res.status(403).json({ error: 'Token inválido' });
-        req.user = user;
-        next();
-    });
-};
-
-const isAdmin = (req, res, next) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ error: 'Requiere permisos de administrador' });
-    }
-    next();
-};
+const authenticateToken = authenticateUser(authService);
+const isAdmin = requireRole('admin');
 
 const isAdventurerOwner = (adventurer, req) => adventurer.ownerId && adventurer.ownerId.toString() === req.user.id.toString();
 
@@ -78,34 +63,77 @@ const canUserViewAdventurer = (adventurer, user) => {
 
 const canViewAdventurer = (adventurer, req) => canUserViewAdventurer(adventurer, req.user);
 const canEditAdventurer = (adventurer, req) => req.user.role === 'admin' || isAdventurerOwner(adventurer, req);
+function authRateLimit({ windowMs = 15 * 60 * 1000, max = 10 } = {}) {
+    const attempts = new Map();
+    return (req, res, next) => {
+        const key = req.ip || req.socket.remoteAddress || 'unknown';
+        const now = Date.now();
+        const current = attempts.get(key);
+        if (!current || current.resetAt <= now) {
+            attempts.set(key, { count: 1, resetAt: now + windowMs });
+            return next();
+        }
+        if (current.count >= max) {
+            return res.status(429).json({ error: 'Demasiados intentos. Inténtalo de nuevo más tarde.' });
+        }
+        current.count += 1;
+        next();
+    };
+}
+
+function sendAuthError(res, error) {
+    const status = error.status || 500;
+    if (status >= 500) console.error('Error de autenticación:', error);
+    return res.status(status).json({ error: status >= 500 ? 'Error interno del servidor.' : error.message });
+}
+
 // --- AUTHENTICATION ROUTES ---
+
+app.post('/api/auth/register', authRateLimit({ max: 8 }), async (req, res) => {
+    try {
+        const result = await authService.register(req.body || {});
+        res.status(201).json(result);
+    } catch (error) {
+        sendAuthError(res, error);
+    }
+});
+
+app.post('/api/auth/login', authRateLimit({ max: 10 }), async (req, res) => {
+    try {
+        res.json(await authService.login(req.body || {}));
+    } catch (error) {
+        sendAuthError(res, error);
+    }
+});
+
+app.get('/api/auth/me', authenticateToken, async (req, res) => {
+    try {
+        const user = await authService.getUserById(req.user.id);
+        if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+        res.json(publicUser(user));
+    } catch (error) {
+        sendAuthError(res, error);
+    }
+});
 
 app.post('/api/login', async (req, res) => {
     try {
-        const { username, password } = req.body;
-        const user = await User.findOne({ username });
-        if (!user) return res.status(400).json({ error: 'Usuario o contraseña incorrectos' });
-
-        const validPassword = await bcrypt.compare(password, user.password);
-        if (!validPassword) return res.status(400).json({ error: 'Usuario o contraseña incorrectos' });
-
-        const token = jwt.sign({ id: user._id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
-        
+        const result = await authService.login(req.body || {});
         res.json({
-            token,
-            user: { username: user.username, role: user.role, email: user.email },
-            needsEmail: !user.email
+            token: result.accessToken,
+            accessToken: result.accessToken,
+            user: result.user,
+            needsEmail: !result.user.email
         });
     } catch (err) {
-        console.error('Error en login:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        sendAuthError(res, err);
     }
 });
 
 app.post('/api/setup-email', authenticateToken, async (req, res) => {
     try {
-        const { email } = req.body;
-        if (!email) return res.status(400).json({ error: 'Email requerido' });
+        const email = normalizeEmail(req.body?.email);
+        if (!isValidEmail(email)) return res.status(400).json({ error: 'Introduce un email válido.' });
 
         const user = await User.findById(req.user.id);
         if (user.email) return res.status(400).json({ error: 'El usuario ya tiene un email configurado' });
@@ -115,14 +143,16 @@ app.post('/api/setup-email', authenticateToken, async (req, res) => {
         res.json({ success: true, message: 'Email configurado correctamente' });
     } catch (err) {
         console.error('Error en setup-email:', err);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        res.status(err?.code === 11000 ? 409 : 500).json({ error: err?.code === 11000 ? 'El email ya está registrado.' : 'Error interno del servidor' });
     }
 });
 
 app.post('/api/forgot-password', async (req, res) => {
     try {
-        const { username } = req.body;
-        const user = await User.findOne({ username });
+        const identity = String(req.body?.identity || req.body?.username || req.body?.email || '').trim();
+        const user = await User.findOne(identity.includes('@')
+            ? { email: normalizeEmail(identity) }
+            : { username: identity });
         
         if (!user || !user.email) {
             return res.status(400).json({ error: 'Usuario no encontrado o no tiene email configurado.' });
@@ -155,17 +185,21 @@ app.post('/api/forgot-password', async (req, res) => {
 
 app.post('/api/reset-password', async (req, res) => {
     try {
-        const { username, code, newPassword } = req.body;
-        const user = await User.findOne({ 
-            username, 
+        const { identity: rawIdentity, username, code, newPassword } = req.body;
+        const identity = String(rawIdentity || username || '').trim();
+        if (!newPassword || String(newPassword).length < MIN_PASSWORD_LENGTH) {
+            return res.status(400).json({ error: `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.` });
+        }
+        const user = await User.findOne({
+            ...(identity.includes('@') ? { email: normalizeEmail(identity) } : { username: identity }),
             resetPasswordCode: code, 
             resetPasswordExpires: { $gt: Date.now() } 
         });
 
         if (!user) return res.status(400).json({ error: 'Código inválido o caducado.' });
 
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(newPassword, salt);
+        user.passwordHash = await authService.hashPassword(newPassword);
+        user.password = user.passwordHash;
         user.resetPasswordCode = undefined;
         user.resetPasswordExpires = undefined;
         await user.save();
@@ -181,8 +215,8 @@ app.post('/api/reset-password', async (req, res) => {
 
 app.get('/api/admin/users', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const users = await User.find({}, '-password'); // No devolver contraseñas
-        res.json(users);
+        const users = await User.find({}, '-password').lean(); // No devolver contraseñas
+        res.json(users.map(user => ({ ...user, ...publicUser(user) })));
     } catch (err) {
         res.status(500).json({ error: 'Error al obtener usuarios' });
     }
@@ -196,12 +230,13 @@ app.post('/api/admin/users', authenticateToken, isAdmin, async (req, res) => {
         const exists = await User.findOne({ username });
         if (exists) return res.status(400).json({ error: 'El usuario ya existe' });
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password || '676767', salt);
+        const hashedPassword = await authService.hashPassword(password || '676767');
 
         const newUser = await User.create({
             username,
+            displayName: username,
             password: hashedPassword,
+            passwordHash: hashedPassword,
             role: role || 'user'
         });
 
@@ -225,8 +260,8 @@ app.put('/api/admin/users/:id', authenticateToken, isAdmin, async (req, res) => 
         if (role) user.role = role;
         
         if (password) {
-            const salt = await bcrypt.genSalt(10);
-            user.password = await bcrypt.hash(password, salt);
+            user.passwordHash = await authService.hashPassword(password);
+            user.password = user.passwordHash;
         }
 
         await user.save();
@@ -240,8 +275,8 @@ app.get('/api/admin/adventurers', authenticateToken, isAdmin, async (_req, res) 
     try {
         const adventurers = await Adventurer.find()
             .sort({ updatedAt: -1 })
-            .populate('ownerId', 'username role')
-            .populate('visibleTo', 'username role')
+            .populate('ownerId', 'username displayName role')
+            .populate('visibleTo', 'username displayName role')
             .lean();
         res.json(adventurers);
     } catch (err) {
@@ -290,8 +325,8 @@ app.put('/api/admin/adventurers/:id/visibility', authenticateToken, isAdmin, asy
         await adventurer.save();
 
         const updated = await Adventurer.findById(adventurer._id)
-            .populate('ownerId', 'username role')
-            .populate('visibleTo', 'username role')
+            .populate('ownerId', 'username displayName role')
+            .populate('visibleTo', 'username displayName role')
             .lean();
         res.json(updated);
     } catch (err) {
@@ -885,16 +920,25 @@ function emitUserList(roomName) {
     io.to(roomName).emit('update-room-users', usersInRoom);
 }
 
-io.use((socket, next) => {
+io.use(async (socket, next) => {
     const token = socket.handshake.auth.token;
     if (!token) {
         return next(new Error("Authentication error"));
     }
-    jwt.verify(token, JWT_SECRET, (err, decoded) => {
-        if (err) return next(new Error("Authentication error"));
-        socket.user = decoded;
+    try {
+        const payload = authService.verifyAccessToken(token);
+        const user = await authService.getUserById(payload.sub);
+        if (!user) return next(new Error("Authentication error"));
+        socket.user = {
+            id: String(user._id),
+            role: user.role || 'user',
+            username: user.username || user.displayName || user.email || 'Usuario',
+            displayName: user.displayName || user.username || ''
+        };
         next();
-    });
+    } catch (_) {
+        next(new Error("Authentication error"));
+    }
 });
 
 io.on('connection', (socket) => {
@@ -1100,15 +1144,14 @@ async function seedDatabase() {
         const count = await User.countDocuments();
         if (count === 0) {
             console.log('Sembrando base de datos con usuarios por defecto...');
-            const salt = await bcrypt.genSalt(10);
-            const defaultPassword = await bcrypt.hash('676767', salt);
+            const defaultPassword = await authService.hashPassword('676767');
 
             const usersToInsert = [
-                { username: 'Panda', password: defaultPassword, role: 'admin' },
-                { username: 'El_Xavista', password: defaultPassword, role: 'user' },
-                { username: 'Marco', password: defaultPassword, role: 'user' },
-                { username: 'White', password: defaultPassword, role: 'user' },
-                { username: 'Vaeltas', password: defaultPassword, role: 'user' }
+                { username: 'Panda', displayName: 'Panda', password: defaultPassword, passwordHash: defaultPassword, role: 'admin' },
+                { username: 'El_Xavista', displayName: 'El_Xavista', password: defaultPassword, passwordHash: defaultPassword, role: 'user' },
+                { username: 'Marco', displayName: 'Marco', password: defaultPassword, passwordHash: defaultPassword, role: 'user' },
+                { username: 'White', displayName: 'White', password: defaultPassword, passwordHash: defaultPassword, role: 'user' },
+                { username: 'Vaeltas', displayName: 'Vaeltas', password: defaultPassword, passwordHash: defaultPassword, role: 'user' }
             ];
 
             await User.insertMany(usersToInsert);
@@ -1120,6 +1163,7 @@ async function seedDatabase() {
 }
 
 connectDB().then(async () => {
+    await ensureUserIndexes();
     await seedDatabase();
     const admin = await User.findOne({ role: 'admin' }).select('_id').lean();
     if (admin) await syncFileAdventures(admin._id);
