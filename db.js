@@ -26,9 +26,26 @@ const rollSchema = new mongoose.Schema({
   createdAt:  { type: Date, default: Date.now }
 });
 
+const roomMemberSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  joinedAt: { type: Date, default: Date.now }
+}, { _id: false });
+
+// `name` remains for compatibility with the original public rooms. Private
+// rooms use `code` and are always accessed through the authenticated API.
 const roomSchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true }
+  name: { type: String, required: true, unique: true, trim: true, maxlength: 80 },
+  code: { type: String, uppercase: true, trim: true, unique: true, sparse: true, index: true },
+  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
+  passwordHash: { type: String, select: false },
+  members: { type: [roomMemberSchema], default: [] },
+  maxMembers: { type: Number, min: 2, max: 50, default: 6 },
+  status: { type: String, enum: ['waiting', 'active', 'closed'], default: 'waiting', index: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 });
+
+roomSchema.index({ code: 1 }, { unique: true, sparse: true });
 
 const userSchema = new mongoose.Schema({
   // username/password se conservan opcionales para leer usuarios creados por
@@ -139,4 +156,11 @@ async function ensureUserIndexes() {
   await User.createIndexes();
 }
 
-module.exports = { connectDB, ensureUserIndexes, Roll, Room, Adventurer, AdventureSession, Adventure, AdventureVersion, User };
+async function ensureRoomIndexes() {
+  await Room.createCollection().catch(error => {
+    if (error?.code !== 48 && error?.codeName !== 'NamespaceExists') throw error;
+  });
+  await Room.createIndexes();
+}
+
+module.exports = { connectDB, ensureUserIndexes, ensureRoomIndexes, Roll, Room, Adventurer, AdventureSession, Adventure, AdventureVersion, User };

@@ -5,7 +5,7 @@ const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 require('dotenv').config();
 const nodemailer = require('nodemailer');
-const { connectDB, ensureUserIndexes, Roll, Room, Adventurer, AdventureSession, Adventure, AdventureVersion, User } = require('./db');
+const { connectDB, ensureUserIndexes, ensureRoomIndexes, Roll, Room, Adventurer, AdventureSession, Adventure, AdventureVersion, User } = require('./db');
 const { AuthService, normalizeEmail, isValidEmail, publicUser, MIN_PASSWORD_LENGTH } = require('./services/auth-service');
 const { authenticateUser, requireRole } = require('./middleware/auth');
 const { AdventureEngine } = require('./services/adventure-engine');
@@ -15,8 +15,10 @@ const { importAdventure, parseAdventureJson } = require('./services/adventure-im
 const { validateAdventureDocument } = require('./services/adventure-validator');
 const { summary: managedAdventureSummary, saveImportedAdventure, getAdventure: getManagedAdventure, listAdventures: listManagedAdventures, publishAdventure, unpublishAdventure, deleteAdventure, syncFileAdventures } = require('./services/adventure-repository');
 const { getSkillRollProfile, normalizeCombatKey, rollDice, resolveSkillRoll } = require('./services/dice-engine');
+const { RoomService, RoomError } = require('./services/room-service');
 
 const authService = new AuthService({ userModel: User });
+const roomService = new RoomService({ roomModel: Room });
 
 // Nodemailer config
 const transporter = nodemailer.createTransport({
@@ -45,7 +47,7 @@ const previewSessions = new Map();
 // Middleware
 app.use(express.static('public'));
 app.use(express.json());
-app.get(['/login', '/register'], (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get(['/login', '/register', '/room/:code'], (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 const authenticateToken = authenticateUser(authService);
 const isAdmin = requireRole('admin');
@@ -86,6 +88,72 @@ function sendAuthError(res, error) {
     if (status >= 500) console.error('Error de autenticación:', error);
     return res.status(status).json({ error: status >= 500 ? 'Error interno del servidor.' : error.message });
 }
+
+function sendRoomError(res, error) {
+    if (error instanceof RoomError) {
+        return res.status(error.status).json({ error: error.message, code: error.code });
+    }
+    if (error?.code === 11000) {
+        return res.status(409).json({ error: 'Ya existe una sala con ese nombre.', code: 'ROOM_NAME_TAKEN' });
+    }
+    console.error('Error de salas:', error);
+    return res.status(500).json({ error: 'No se pudo completar la operación de sala.', code: 'ROOM_INTERNAL_ERROR' });
+}
+
+// --- PRIVATE ROOM ROUTES ---
+
+app.post('/api/rooms', authenticateToken, async (req, res) => {
+    try {
+        const room = await roomService.create({ ...req.body, ownerId: req.user.id });
+        res.status(201).json(room);
+    } catch (error) {
+        sendRoomError(res, error);
+    }
+});
+
+app.post('/api/rooms/:code/join', authenticateToken, authRateLimit({ max: 8 }), async (req, res) => {
+    try {
+        const room = await roomService.join({ code: req.params.code, password: req.body?.password, userId: req.user.id });
+        res.json(room);
+    } catch (error) {
+        sendRoomError(res, error);
+    }
+});
+
+app.get('/api/rooms/:code', authenticateToken, async (req, res) => {
+    try {
+        res.json(await roomService.getMemberRoom({ code: req.params.code, userId: req.user.id }));
+    } catch (error) {
+        sendRoomError(res, error);
+    }
+});
+
+app.post('/api/rooms/:code/leave', authenticateToken, async (req, res) => {
+    try {
+        res.json(await roomService.leave({ code: req.params.code, userId: req.user.id }));
+    } catch (error) {
+        sendRoomError(res, error);
+    }
+});
+
+app.patch('/api/rooms/:code', authenticateToken, async (req, res) => {
+    try {
+        res.json(await roomService.update({ code: req.params.code, userId: req.user.id, patch: req.body || {} }));
+    } catch (error) {
+        sendRoomError(res, error);
+    }
+});
+
+app.delete('/api/rooms/:code', authenticateToken, async (req, res) => {
+    try {
+        const room = await roomService.remove({ code: req.params.code, userId: req.user.id });
+        await Roll.deleteMany({ room: room.code });
+        io.to(room.code).emit('room-deleted');
+        res.json({ success: true, room });
+    } catch (error) {
+        sendRoomError(res, error);
+    }
+});
 
 // --- AUTHENTICATION ROUTES ---
 
@@ -899,7 +967,8 @@ app.post('/api/adventure-sessions/:id/roll', authenticateToken, async (req, res)
 // Enviar lista de salas a todos
 async function emitRoomList() {
     try {
-        const rooms = await Room.distinct('name');
+        // Las salas privadas no se anuncian: se descubren mediante su código.
+        const rooms = await Room.distinct('name', { code: { $exists: false } });
         io.emit('update-rooms', rooms);
     } catch (err) {
         console.error('Error al obtener lista de salas:', err);
@@ -948,6 +1017,13 @@ io.on('connection', (socket) => {
 
     socket.on('join-room', async ({ roomName, username, stance, adventurerId, adventurerName }) => {
         try {
+            const privateRoom = await Room.findOne({ code: String(roomName || '').trim().toUpperCase() });
+            if (privateRoom) {
+                const isMember = (privateRoom.members || []).some(member => String(member.userId) === socket.user.id);
+                if (!isMember || privateRoom.status === 'closed') {
+                    return socket.emit('room-access-denied', { code: privateRoom.status === 'closed' ? 'ROOM_CLOSED' : 'ROOM_ACCESS_DENIED' });
+                }
+            }
             socket.join(roomName);
             activeUsers[socket.id] = {
                 username: socket.user.username, // Usa el username validado del token
@@ -996,6 +1072,10 @@ io.on('connection', (socket) => {
 
     socket.on('clear-history', async (roomName) => {
         try {
+            const privateRoom = await Room.findOne({ code: String(roomName || '').trim().toUpperCase() });
+            if (privateRoom && String(privateRoom.ownerId) !== socket.user.id) {
+                return socket.emit('room-access-denied', { code: 'ROOM_OWNER_REQUIRED' });
+            }
             await Roll.deleteMany({ room: roomName });
             console.log(`Historial borrado en la sala: ${roomName}`);
             io.to(roomName).emit('load-history', []);
@@ -1014,8 +1094,12 @@ io.on('connection', (socket) => {
 
     socket.on('delete-room', async (roomName) => {
         try {
+            const privateRoom = await Room.findOne({ code: String(roomName || '').trim().toUpperCase() });
+            if (privateRoom && String(privateRoom.ownerId) !== socket.user.id) {
+                return socket.emit('room-access-denied', { code: 'ROOM_OWNER_REQUIRED' });
+            }
             await Roll.deleteMany({ room: roomName });
-            await Room.deleteOne({ name: roomName });
+            await Room.deleteOne(privateRoom ? { _id: privateRoom._id } : { name: roomName });
             console.log(`Sala eliminada: ${roomName}`);
             emitRoomList();
             io.to(roomName).emit('room-deleted');
@@ -1089,6 +1173,11 @@ io.on('connection', (socket) => {
             }
 
             const room = currentUserObj.room;
+            const privateRoom = await Room.findOne({ code: String(room || '').trim().toUpperCase() });
+            if (privateRoom) {
+                const isMember = (privateRoom.members || []).some(member => String(member.userId) === socket.user.id);
+                if (!isMember || privateRoom.status === 'closed') return socket.emit('roll-error', 'Ya no tienes acceso a esta sala.');
+            }
             const senderName = socket.user.username; // Usa el usuario logueado
             const senderStance = currentUserObj.stance || 'Posición abierta';
 
@@ -1164,6 +1253,7 @@ async function seedDatabase() {
 
 connectDB().then(async () => {
     await ensureUserIndexes();
+    await ensureRoomIndexes();
     await seedDatabase();
     const admin = await User.findOne({ role: 'admin' }).select('_id').lean();
     if (admin) await syncFileAdventures(admin._id);

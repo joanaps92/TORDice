@@ -401,8 +401,25 @@
             </div>
 
 
+            <div class="border rounded p-3 mb-3" style="border-color: rgba(197,160,89,.55)!important; background: rgba(255,255,255,.25);">
+                <div class="tor-label mb-2"><i class="fa-solid fa-key me-1"></i> SALAS PRIVADAS</div>
+                <form id="join-private-room-form" class="row g-2" autocomplete="off">
+                    <div class="col-md-5"><label for="private-room-code" class="form-label small mb-1">Código de sala</label><input type="text" class="form-control tor-input text-uppercase" id="private-room-code" maxlength="6" pattern="[A-Za-z0-9]{6}" placeholder="F7K2QX"></div>
+                    <div class="col-md-5"><label for="private-room-password" class="form-label small mb-1">Contraseña</label><input type="password" class="form-control tor-input" id="private-room-password" minlength="8" placeholder="Contraseña de la sala"></div>
+                    <div class="col-md-2 d-flex align-items-end"><button id="join-private-room-btn" class="btn btn-tor-primary w-100" type="submit">Entrar</button></div>
+                </form>
+                <div id="private-room-result" class="small mt-2 d-none"><span id="private-room-result-text"></span> <button id="private-room-copy-link" type="button" class="btn btn-link btn-sm p-0 d-none">Copiar enlace</button></div>
+                <hr class="my-3">
+                <form id="create-private-room-form" class="row g-2" autocomplete="off">
+                    <div class="col-md-4"><label for="new-room-name" class="form-label small mb-1">Crear sala · nombre</label><input type="text" class="form-control tor-input" id="new-room-name" maxlength="80" placeholder="Partida del viernes"></div>
+                    <div class="col-md-4"><label for="new-room-password" class="form-label small mb-1">Contraseña</label><input type="password" class="form-control tor-input" id="new-room-password" minlength="8" placeholder="Mínimo 8 caracteres"></div>
+                    <div class="col-md-2"><label for="new-room-max-members" class="form-label small mb-1">Jugadores</label><input type="number" class="form-control tor-input" id="new-room-max-members" min="2" max="50" value="6"></div>
+                    <div class="col-md-2 d-flex align-items-end"><button id="create-private-room-btn" class="btn btn-outline-danger w-100" type="submit">Crear</button></div>
+                </form>
+            </div>
+
             <div class="mb-3">
-                <label for="roomname" class="form-label tor-label"><i class="fa-solid fa-landmark me-1"></i> Nombre de la Sala / Campaña</label>
+                <label for="roomname" class="form-label tor-label"><i class="fa-solid fa-landmark me-1"></i> Sala histórica abierta</label>
                 <input type="text" class="form-control tor-input" id="roomname" placeholder="Ej. Campaña de Eriador">
             </div>
 

@@ -47,6 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (saveBtn) saveBtn.disabled = true;
             }
             if (window.initSocket) window.initSocket(getToken());
+            const linkedRoomCode = window.location.pathname.match(/^\/room\/([A-Za-z0-9]{6})$/)?.[1];
+            const linkedRoomInput = document.getElementById('private-room-code');
+            if (linkedRoomCode && linkedRoomInput) linkedRoomInput.value = linkedRoomCode.toUpperCase();
             showScreen(roomSelectionScreen);
         } catch (_) {
             showScreen(authScreen);

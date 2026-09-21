@@ -118,6 +118,13 @@ const roomSelectionScreen = document.getElementById('room-selection-screen');
 const appScreen = document.getElementById('app-screen');
 const joinBtn = document.getElementById('join-btn');
 const roomnameInput = document.getElementById('roomname');
+const privateRoomCodeInput = document.getElementById('private-room-code');
+const privateRoomPasswordInput = document.getElementById('private-room-password');
+const joinPrivateRoomForm = document.getElementById('join-private-room-form');
+const createPrivateRoomForm = document.getElementById('create-private-room-form');
+const privateRoomResult = document.getElementById('private-room-result');
+const privateRoomResultText = document.getElementById('private-room-result-text');
+const privateRoomCopyLink = document.getElementById('private-room-copy-link');
 const userDisplay = document.getElementById('user-display');
 const roomDisplay = document.getElementById('room-display');
 const adventureScreen = document.getElementById('adventure-screen');
@@ -1793,29 +1800,58 @@ initLastSessionSuggestion();
 loadCultures();
 if (!isLocalFile) fetchAdventurers();
 
-// Join Room
-joinBtn.addEventListener('click', () => {
-    const user = window.currentUser || currentUser;
-    const room = roomnameInput.value.trim();
+const linkedRoomCode = window.location.pathname.match(/^\/room\/([A-Za-z0-9]{6})$/)?.[1];
+if (linkedRoomCode && privateRoomCodeInput) privateRoomCodeInput.value = linkedRoomCode.toUpperCase();
 
-    if (!user || !room) {
-        appAlert("Por favor, escribe el nombre de la sala a la que deseas entrar.");
-        return;
+async function privateRoomRequest(path, options = {}) {
+    const response = await fetch(path, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${window.TokenService?.getToken?.() || ''}`,
+            ...(options.headers || {})
+        }
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        const error = new Error(data.error || 'No se pudo completar la operación de sala.');
+        error.code = data.code;
+        throw error;
     }
+    return data;
+}
 
+function showPrivateRoomResult(message, isError = false) {
+    if (!privateRoomResult) return;
+    privateRoomResult.classList.remove('d-none', 'text-danger', 'text-success');
+    privateRoomResult.classList.add(isError ? 'text-danger' : 'text-success');
+    if (privateRoomResultText) privateRoomResultText.textContent = message;
+    else privateRoomResult.textContent = message;
+    privateRoomCopyLink?.classList.add('d-none');
+}
+
+privateRoomCopyLink?.addEventListener('click', async () => {
+    const link = privateRoomCopyLink.dataset.link;
+    if (!link) return;
+    try {
+        await navigator.clipboard.writeText(link);
+        showPrivateRoomResult('Enlace copiado al portapapeles.');
+    } catch (_) {
+        showPrivateRoomResult(link);
+    }
+});
+
+function enterRoom(room, displayName = room) {
+    const user = window.currentUser || currentUser;
+    if (!user || !room) return;
     currentUser = user;
     currentRoom = room;
     currentStance = stanceSelect.value || "Posición abierta";
-
-    // Save last session for next time
     saveLastSession(currentUser, currentRoom);
-
     userDisplay.innerHTML = `<i class="fa-solid fa-user me-1"></i> ${currentUser}`;
-    roomDisplay.innerHTML = `<i class="fa-solid fa-landmark me-1"></i> Sala: ${currentRoom}`;
+    roomDisplay.innerHTML = `<i class="fa-solid fa-landmark me-1"></i> Sala: ${escapeHtml(displayName)}`;
     changeUsernameInput.value = currentUser;
-
     if (isLocalFile) {
-        // Mock join-room logic
         const history = getLocalHistory(currentRoom);
         historyList.innerHTML = "";
         if (history.length === 0) renderEmptyMessage();
@@ -1831,9 +1867,60 @@ joinBtn.addEventListener('click', () => {
             adventurerName: savedAdventurers.find(item => item._id === assignedAdventurerId)?.nombre || ''
         });
     }
-
     roomSelectionScreen.classList.add('d-none');
     appScreen.classList.remove('d-none');
+}
+
+joinPrivateRoomForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const code = privateRoomCodeInput.value.trim().toUpperCase();
+    const password = privateRoomPasswordInput.value;
+    if (!/^[A-Z2-9]{6}$/.test(code)) return showPrivateRoomResult('El código debe tener 6 caracteres.', true);
+    try {
+        const room = await privateRoomRequest(`/api/rooms/${encodeURIComponent(code)}/join`, { method: 'POST', body: JSON.stringify({ password }) });
+        showPrivateRoomResult(`Has entrado en «${room.name}».`);
+        enterRoom(room.code, room.name);
+    } catch (error) {
+        showPrivateRoomResult(error.message, true);
+    }
+});
+
+createPrivateRoomForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    try {
+        const room = await privateRoomRequest('/api/rooms', {
+            method: 'POST',
+            body: JSON.stringify({
+                name: document.getElementById('new-room-name').value,
+                password: document.getElementById('new-room-password').value,
+                maxMembers: Number(document.getElementById('new-room-max-members').value)
+            })
+        });
+        privateRoomCodeInput.value = room.code;
+        privateRoomPasswordInput.value = document.getElementById('new-room-password').value;
+        const link = `${window.location.origin}/room/${room.code}`;
+        showPrivateRoomResult(`Sala creada. Código: ${room.code}`);
+        if (privateRoomCopyLink) {
+            privateRoomCopyLink.dataset.link = link;
+            privateRoomCopyLink.classList.remove('d-none');
+        }
+        enterRoom(room.code, room.name);
+    } catch (error) {
+        showPrivateRoomResult(error.message, true);
+    }
+});
+
+// Join Room
+joinBtn.addEventListener('click', () => {
+    const user = window.currentUser || currentUser;
+    const room = roomnameInput.value.trim();
+
+    if (!user || !room) {
+        appAlert("Por favor, escribe el nombre de la sala a la que deseas entrar.");
+        return;
+    }
+
+    enterRoom(room, room);
 });
 
 function featDieSortValue(value) { return value === 11 ? -1 : (value === 12 ? 13 : value); }
@@ -1908,7 +1995,10 @@ clearHistoryBtn.addEventListener('click', () => {
 leaveBtn.addEventListener('click', () => {
     appConfirm("¿Seguro que quieres salir de la sala?", 'Salir de la sala').then(confirmed => { if (confirmed) {
         if (!isLocalFile) {
-            window.location.reload();
+            const leavePrivateRoom = /^[A-Z2-9]{6}$/.test(currentRoom)
+                ? privateRoomRequest(`/api/rooms/${encodeURIComponent(currentRoom)}/leave`, { method: 'POST' }).catch(() => null)
+                : Promise.resolve();
+            leavePrivateRoom.then(() => window.location.reload());
         } else {
             roomSelectionScreen.classList.remove('d-none');
             appScreen.classList.add('d-none');
@@ -2045,6 +2135,15 @@ socket.on('update-room-users', (users) => {
 
 socket.on('room-deleted', () => {
      appAlert("Esta sala ha sido eliminada por un administrador.").then(() => window.location.reload());
+});
+
+socket.on('room-access-denied', ({ code } = {}) => {
+    const messages = {
+        ROOM_CLOSED: 'La sala está cerrada.',
+        ROOM_OWNER_REQUIRED: 'Solo el propietario puede realizar esa acción.',
+        ROOM_ACCESS_DENIED: 'No tienes acceso a esta sala.'
+    };
+    appAlert(messages[code] || 'Acceso denegado.', 'Sala privada');
 });
 
     socket.on('update-rooms', (rooms) => {
