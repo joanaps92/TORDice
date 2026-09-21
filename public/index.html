@@ -22,7 +22,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800;900&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600&family=MedievalSharp&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=adventures-3">
+    <link rel="stylesheet" href="style.css?v=rooms-layout-1">
 </head>
 <body>
     <!-- Auth Screen -->
@@ -387,7 +387,7 @@
 
     <!-- Room Selection Screen (Formerly Login) -->
     <div id="room-selection-screen" class="container d-none align-items-center justify-content-center min-vh-100 py-4">
-        <div class="card border-0 shadow-lg p-4 p-md-5 login-card animate-fade-in tor-book-panel position-relative">
+        <div class="card border-0 shadow-lg p-4 p-md-5 login-card room-selection-card animate-fade-in tor-book-panel position-relative">
             <!-- Book Corner Accents -->
             <div class="tor-corner-tl"></div>
             <div class="tor-corner-tr"></div>
@@ -401,20 +401,20 @@
             </div>
 
 
-            <div class="border rounded p-3 mb-3" style="border-color: rgba(197,160,89,.55)!important; background: rgba(255,255,255,.25);">
+            <div class="private-room-panel border rounded p-3 mb-3">
                 <div class="tor-label mb-2"><i class="fa-solid fa-key me-1"></i> SALAS PRIVADAS</div>
-                <form id="join-private-room-form" class="row g-2" autocomplete="off">
-                    <div class="col-md-5"><label for="private-room-code" class="form-label small mb-1">Código de sala</label><input type="text" class="form-control tor-input text-uppercase" id="private-room-code" maxlength="6" pattern="[A-Za-z0-9]{6}" placeholder="F7K2QX"></div>
-                    <div class="col-md-5"><label for="private-room-password" class="form-label small mb-1">Contraseña</label><input type="password" class="form-control tor-input" id="private-room-password" minlength="8" placeholder="Contraseña de la sala"></div>
-                    <div class="col-md-2 d-flex align-items-end"><button id="join-private-room-btn" class="btn btn-tor-primary w-100" type="submit">Entrar</button></div>
+                <form id="join-private-room-form" class="private-room-form private-room-join-form" autocomplete="off">
+                    <label for="private-room-code" class="private-room-field">Código de sala<input type="text" class="form-control tor-input text-uppercase" id="private-room-code" maxlength="6" pattern="[A-Za-z0-9]{6}" placeholder="F7K2QX"></label>
+                    <label for="private-room-password" class="private-room-field">Contraseña<input type="password" class="form-control tor-input" id="private-room-password" minlength="8" placeholder="Contraseña de la sala"></label>
+                    <button id="join-private-room-btn" class="btn btn-tor-primary private-room-action" type="submit">Entrar</button>
                 </form>
                 <div id="private-room-result" class="small mt-2 d-none"><span id="private-room-result-text"></span> <button id="private-room-copy-link" type="button" class="btn btn-link btn-sm p-0 d-none">Copiar enlace</button></div>
                 <hr class="my-3">
-                <form id="create-private-room-form" class="row g-2" autocomplete="off">
-                    <div class="col-md-4"><label for="new-room-name" class="form-label small mb-1">Crear sala · nombre</label><input type="text" class="form-control tor-input" id="new-room-name" maxlength="80" placeholder="Partida del viernes"></div>
-                    <div class="col-md-4"><label for="new-room-password" class="form-label small mb-1">Contraseña</label><input type="password" class="form-control tor-input" id="new-room-password" minlength="8" placeholder="Mínimo 8 caracteres"></div>
-                    <div class="col-md-2"><label for="new-room-max-members" class="form-label small mb-1">Jugadores</label><input type="number" class="form-control tor-input" id="new-room-max-members" min="2" max="50" value="6"></div>
-                    <div class="col-md-2 d-flex align-items-end"><button id="create-private-room-btn" class="btn btn-outline-danger w-100" type="submit">Crear</button></div>
+                <form id="create-private-room-form" class="private-room-form private-room-create-form" autocomplete="off">
+                    <label for="new-room-name" class="private-room-field">Crear sala · nombre<input type="text" class="form-control tor-input" id="new-room-name" maxlength="80" placeholder="Partida del viernes"></label>
+                    <label for="new-room-password" class="private-room-field">Contraseña<input type="password" class="form-control tor-input" id="new-room-password" minlength="8" placeholder="Mínimo 8 caracteres"></label>
+                    <label for="new-room-max-members" class="private-room-field private-room-max-field">Jugadores<input type="number" class="form-control tor-input" id="new-room-max-members" min="2" max="50" value="6"></label>
+                    <button id="create-private-room-btn" class="btn btn-outline-danger private-room-action" type="submit">Crear</button>
                 </form>
             </div>
 
